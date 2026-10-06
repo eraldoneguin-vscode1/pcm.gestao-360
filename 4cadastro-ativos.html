@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM360 - Cadastro de Ativos e Frota</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background-color: #051622;
+            background-image: linear-gradient(rgba(5, 22, 34, 0.75), rgba(5, 22, 34, 0.85)), url('fundo.png');
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            color: #ffffff; min-height: 100vh; padding: 15px;
+        }
+        .container { max-width: 900px; margin: 0 auto; background: rgba(8, 30, 48, 0.9); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3); padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3a5f; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .header h2 { color: #00d4ff; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        .btn-voltar { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s; }
+        .btn-voltar:hover { background: #475569; }
+        
+        .content-section { background: rgba(2, 12, 20, 0.6); padding: 15px; border-radius: 8px; border: 1px solid #1e3a5f; margin-bottom: 20px; }
+        .form-row { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .form-row-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px; }
+        
+        label { font-size: 12px; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 500; }
+        input, select { width: 100%; padding: 10px; background: rgba(2, 12, 20, 0.8); border: 1px solid #1e3a5f; border-radius: 6px; color: #fff; font-size: 13px; }
+        #frota-modelo { text-transform: uppercase; }
+        input:focus, select:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 8px rgba(0, 212, 255, 0.4); }
+
+        .radio-group-container { background: rgba(2, 12, 20, 0.8); border: 1px solid #1e3a5f; border-radius: 6px; padding: 10px; display: flex; gap: 20px; align-items: center; height: 43px; }
+        .radio-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #cbd5e1; cursor: pointer; margin-bottom: 0 !important; }
+        .radio-label input[type="radio"] { accent-color: #00d4ff; width: 16px; height: 16px; cursor: pointer; }
+        
+        .btn-salvar { background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; transition: opacity 0.2s; margin-top: 10px; }
+        .btn-salvar:hover { opacity: 0.9; }
+        .btn-salvar:disabled { background: #64748b; cursor: not-allowed; }
+
+        .ativos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+        .ativo-card { background: rgba(4, 18, 30, 0.9); border: 1px solid #1e3a5f; border-radius: 8px; padding: 15px; border-left: 4px solid #f59e0b; }
+        
+        .card-fotos-container { margin-top: 12px; border-top: 1px solid #1e3a5f; padding-top: 10px; }
+        .card-fotos-titulo { font-size: 11px; color: #94a3b8; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
+        .card-fotos-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        
+        .foto-slot {
+            width: 100%;
+            height: 55px;
+            background: rgba(2, 12, 20, 0.8);
+            border: 1px dashed #334155;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        .foto-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+        .foto-slot span {
+            font-size: 9px;
+            color: #64748b;
+            text-align: center;
+            padding: 2px;
+            z-index: 1;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 12px; }
+            .form-row, .form-row-4 { grid-template-columns: 1fr; gap: 10px; }
+            .radio-group-container { height: auto; flex-direction: column; align-items: flex-start; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h2>🚜 PCM360 — Cadastro de Ativos e Frota <span style="background:#f59e0b; color:#051622; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">MÓDULO</span></h2>
+            <button onclick="window.location.href='0painel-master.html'" class="btn-voltar" type="button">⬅ Voltar ao Painel</button>
+        </div>
+
+        <div class="content-section">
+            <h3 style="color: #38bdf8; margin-bottom: 15px; font-size: 16px;">Cadastrar Novo Ativo / Máquina</h3>
+            
+            <div class="form-row">
+                <div>
+                    <label>Modelo do Ativo</label>
+                    <input type="text" id="frota-modelo" placeholder="Ex: Trator John Deere 7230">
+                </div>
+                <div>
+                    <label>Nº do Ativo (Ex: 0000-00)</label>
+                    <input type="text" id="frota-ativo" placeholder="0000-00" maxlength="7">
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 12px;">
+                <div>
+                    <label>Tipo de Medição</label>
+                    <div class="radio-group-container">
+                        <label class="radio-label">
+                            <input type="radio" name="frota-tipo-medicao" value="Horas" checked> Horímetros (Horas)
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="frota-tipo-medicao" value="KM"> Odômetro (KM)
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label>Leitura Atual (Km / Horas)</label>
+                    <input type="number" id="frota-leitura-atual" placeholder="Ex: 4800">
+                </div>
+            </div>
+
+            <label style="color: #00d4ff; margin-top: 15px; margin-bottom: 6px; font-weight: bold; font-size: 13px;">🔗 Links das 4 Fotos do Ativo (URL das Imagens)</label>
+            
+            <div class="form-row-4">
+                <div>
+                    <label>Link Foto 1 (Frente)</label>
+                    <input type="text" id="foto-1" placeholder="Cole o link da 1ª foto aqui...">
+                </div>
+                <div>
+                    <label>Link Foto 2 (Lado Esquerdo)</label>
+                    <input type="text" id="foto-2" placeholder="Cole o link da 2ª foto aqui...">
+                </div>
+            </div>
+            <div class="form-row-4">
+                <div>
+                    <label>Link Foto 3 (Lado Direito)</label>
+                    <input type="text" id="foto-3" placeholder="Cole o link da 3ª foto aqui...">
+                </div>
+                <div>
+                    <label>Link Foto 4 (Traseira)</label>
+                    <input type="text" id="foto-4" placeholder="Cole o link da 4ª foto aqui...">
+                </div>
+            </div>
+
+            <button id="btn-salvar-frota" class="btn-salvar" type="button">Salvar Ativo na Planilha</button>
+        </div>
+
+        <div class="content-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="color: #38bdf8; font-size: 16px;">Ativos Cadastrados</h3>
+                <button onclick="carregarAtivos()" style="background: #1e3a5f; color: #38bdf8; border: 1px solid #00d4ff; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">🔄 Atualizar Lista</button>
+            </div>
+            
+            <div id="loadingAtivos" style="text-align: center; color: #94a3b8; font-size: 13px; padding: 20px;">Carregando ativos...</div>
+            <div id="gridAtivos" class="ativos-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzm9jYbJH_l-J2nlp34y_V2pZVYhaXKyMbvqE-Ei6cQzvZ1deUYrPpXWzdanSEflDjt/exec";
+
+        function obterIdEmpresaAtiva() {
+            const usuario = JSON.parse(localStorage.getItem('pcm_usuario') || '{}');
+            if (!usuario.idEmpresa) {
+                alert('Sessão expirada ou usuário não logado. Faça login novamente.');
+                window.location.href = 'login.html';
+                return null;
+            }
+            return usuario.idEmpresa;
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btn-salvar-frota').addEventListener('click', salvarFrota);
+            
+            const inputAtivo = document.getElementById('frota-ativo');
+            inputAtivo.addEventListener('input', (e) => {
+                let valor = e.target.value.replace(/\D/g, '');
+                if (valor.length > 4) {
+                    valor = valor.substring(0, 4) + '-' + valor.substring(4, 6);
+                }
+                e.target.value = valor;
+            });
+
+            carregarAtivos();
+        });
+
+        async function salvarFrota() {
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) return;
+
+            const modelo = document.getElementById('frota-modelo').value.trim().toUpperCase();
+            const ativo = document.getElementById('frota-ativo').value.trim();
+            const radioSelecionado = document.querySelector('input[name="frota-tipo-medicao"]:checked');
+            const tipoMedicao = radioSelecionado ? radioSelecionado.value : 'Horas';
+            const leituraAtual = parseFloat(document.getElementById('frota-leitura-atual').value);
+
+            const foto1 = document.getElementById('foto-1').value.trim();
+            const foto2 = document.getElementById('foto-2').value.trim();
+            const foto3 = document.getElementById('foto-3').value.trim();
+            const foto4 = document.getElementById('foto-4').value.trim();
+
+            if (!modelo || !ativo || isNaN(leituraAtual)) {
+                alert('Preencha o modelo, número do ativo e a leitura atual corretamente.');
+                return;
+            }
+
+            const regexAtivo = /^\d{4}-\d{2}$/;
+            if (!regexAtivo.test(ativo)) {
+                alert('O Número do Ativo deve seguir o formato exato: 0000-00 (Ex: 1234-56)');
+                return;
+            }
+
+            const btnSalvar = document.getElementById('btn-salvar-frota');
+            btnSalvar.disabled = true;
+            btnSalvar.textContent = 'Salvando ativo...';
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        acao: 'cadastrarAtivo',
+                        idEmpresa: idEmpresa,
+                        modelo: modelo,
+                        ativo: ativo,
+                        tipoMedicao: tipoMedicao,
+                        leituraAtual: leituraAtual,
+                        foto1: foto1,
+                        foto2: foto2,
+                        foto3: foto3,
+                        foto4: foto4
+                    })
+                });
+
+                const res = await response.json();
+
+                if (res && res.sucesso !== false) {
+                    alert('Ativo cadastrado com sucesso na planilha!');
+                    
+                    document.getElementById('frota-modelo').value = '';
+                    document.getElementById('frota-ativo').value = '';
+                    document.getElementById('frota-leitura-atual').value = '';
+                    document.getElementById('foto-1').value = '';
+                    document.getElementById('foto-2').value = '';
+                    document.getElementById('foto-3').value = '';
+                    document.getElementById('foto-4').value = '';
+
+                    carregarAtivos();
+                } else {
+                    alert('Erro ao salvar: ' + (res ? res.erro : 'Desconhecido'));
+                }
+            } catch (erro) {
+                alert('Erro de conexão ao salvar ativo.');
+            } finally {
+                btnSalvar.disabled = false;
+                btnSalvar.textContent = 'Salvar Ativo na Planilha';
+            }
+        }
+
+        async function carregarAtivos() {
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) return;
+
+            const grid = document.getElementById('gridAtivos');
+            const loading = document.getElementById('loadingAtivos');
+            loading.style.display = 'block';
+            grid.innerHTML = '';
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        acao: 'listarAtivos',
+                        idEmpresa: idEmpresa 
+                    })
+                });
+                const res = await response.json();
+
+                loading.style.display = 'none';
+
+                if (res.sucesso && res.ativos && res.ativos.length > 0) {
+                    res.ativos.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'ativo-card';
+                        
+                        let ativoBruto = String(item.ativo || '').trim();
+                        if (ativoBruto.length > 0 && ativoBruto.length < 7) {
+                            ativoBruto = ativoBruto.padStart(7, '0');
+                        }
+                        const ativoFormatado = ativoBruto || '0000-00';
+
+                        card.innerHTML = `
+                            <h4 style="color: #00d4ff; font-size: 15px; margin-bottom: 6px;">🚜 ${item.modelo}</h4>
+                            <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 3px;"><strong>Nº Ativo:</strong> ${ativoFormatado}</p>
+                            <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 3px;"><strong>Medição:</strong> ${item.tipoMedicao}</p>
+                            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;"><strong>Leitura Atual:</strong> ${item.leituraAtual}</p>
+                            
+                            <div class="card-fotos-container">
+                                <div class="card-fotos-titulo">Fotos do Ativo (4 Ângulos)</div>
+                                <div class="card-fotos-grid">
+                                    <div class="foto-slot">
+                                        <span>Frente</span>
+                                        ${item.foto1 ? `<img src="${item.foto1}" onerror="this.remove()">` : ''}
+                                    </div>
+                                    <div class="foto-slot">
+                                        <span>Esq.</span>
+                                        ${item.foto2 ? `<img src="${item.foto2}" onerror="this.remove()">` : ''}
+                                    </div>
+                                    <div class="foto-slot">
+                                        <span>Dir.</span>
+                                        ${item.foto3 ? `<img src="${item.foto3}" onerror="this.remove()">` : ''}
+                                    </div>
+                                    <div class="foto-slot">
+                                        <span>Tras.</span>
+                                        ${item.foto4 ? `<img src="${item.foto4}" onerror="this.remove()">` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                } else {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #64748b; font-size: 13px; padding: 15px;">Nenhum ativo cadastrado para esta empresa.</div>';
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #f87171; font-size: 13px; padding: 15px;">Erro ao carregar os ativos da planilha.</div>';
+            }
+        }
+    </script>
+</body>
+</html>

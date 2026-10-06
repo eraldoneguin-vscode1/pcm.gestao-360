@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM360 - Cadastro de Funcionários</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background-color: #051622;
+            background-image: linear-gradient(rgba(5, 22, 34, 0.75), rgba(5, 22, 34, 0.85)), url('fundo.png');
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            color: #ffffff; min-height: 100vh; padding: 15px;
+        }
+        .container { max-width: 800px; margin: 0 auto; background: rgba(8, 30, 48, 0.9); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3); padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3a5f; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .header h2 { color: #00d4ff; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        .btn-voltar { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s; }
+        .btn-voltar:hover { background: #475569; }
+        .content-section { background: rgba(2, 12, 20, 0.6); padding: 15px; border-radius: 8px; border: 1px solid #1e3a5f; margin-bottom: 20px; }
+        
+        .form-row { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        
+        input, select { 
+            width: 100%; padding: 10px; background: rgba(2, 12, 20, 0.8); 
+            border: 1px solid #1e3a5f; border-radius: 6px; color: #fff; margin-top: 5px; font-size: 14px; 
+        }
+        #func-nome { text-transform: uppercase; }
+        input:focus, select:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 8px rgba(0, 212, 255, 0.4); }
+        
+        input.input-erro { border-color: #ef4444 !important; box-shadow: 0 0 8px rgba(239, 68, 68, 0.5); }
+        .msg-erro { color: #ef4444; font-size: 11px; margin-top: 3px; display: none; }
+        select option { background: #051622; color: #fff; }
+        
+        .btn-salvar { background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; transition: opacity 0.2s; margin-top: 5px; }
+        .btn-salvar:hover { opacity: 0.9; }
+        .btn-salvar:disabled { background: #64748b; cursor: not-allowed; }
+
+        .funcionarios-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-top: 15px; }
+        .funcionario-card { background: rgba(4, 18, 30, 0.9); border: 1px solid #1e3a5f; border-radius: 8px; padding: 12px; border-left: 4px solid #10b981; }
+
+        .foto-funcionario {
+            width: 45px; height: 45px; border-radius: 50%; object-fit: cover;
+            border: 1px solid #00d4ff; background: #020c14;
+            transition: transform 0.3s ease, box-shadow 0.3s ease; cursor: pointer; position: relative; z-index: 1;
+        }
+        .foto-funcionario:hover { transform: scale(2.4); box-shadow: 0 4px 15px rgba(0, 212, 255, 0.6); z-index: 10; }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 12px; }
+            .form-row, .form-row-2 { grid-template-columns: 1fr; gap: 10px; }
+            .header h2 { font-size: 16px; }
+            .funcionarios-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h2>👥 PCM360 — Cadastro de Funcionários <span style="background:#38bdf8; color:#051622; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">MÓDULO</span></h2>
+            <button id="btnVoltarPainel" class="btn-voltar" type="button">⬅ Voltar ao Painel</button>
+        </div>
+
+        <div class="content-section">
+            <h3 style="color: #38bdf8; margin-bottom: 15px; font-size: 16px;">Cadastrar Novo Funcionário</h3>
+            
+            <div class="form-row">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1; font-weight:500;">Nome Completo</label>
+                    <input type="text" id="func-nome" placeholder="Ex: Francisco Eraldo">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1; font-weight:500;">Matrícula (Máx. 6 Números)</label>
+                    <input type="text" id="func-matricula" maxlength="6" placeholder="Ex: 010311">
+                    <span id="erro-matricula" class="msg-erro">❌ Matrícula inválida! Máximo de 6 dígitos numéricos.</span>
+                </div>
+            </div>
+
+            <div class="form-row-2">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1; font-weight:500;">Setor</label>
+                    <select id="func-setor">
+                        <option value="">Carregando setores...</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1; font-weight:500;">Cargo / Função</label>
+                    <select id="func-cargo">
+                        <option value="">Selecione o cargo...</option>
+                        <option value="Diretor">Diretor</option>
+                        <option value="Gerente">Gerente</option>
+                        <option value="Coordenador">Coordenador</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Encarregado">Encarregado</option>
+                        <option value="Eletricista">Eletricista</option>
+                        <option value="Mecânico">Mecânico</option>
+                        <option value="Auxiliar Eletricista">Auxiliar Eletricista</option>
+                        <option value="Auxiliar Mecânico">Auxiliar Mecânico</option>
+                        <option value="Operador">Operador</option>
+                        <option value="Aprendiz">Aprendiz</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-size:12px; color:#cbd5e1; font-weight:500;">Link da Foto (Google Drive ou Imagem)</label>
+                <input type="text" id="func-foto" placeholder="Cole o link da foto do funcionário aqui">
+            </div>
+            
+            <button id="btn-salvar-funcionario" class="btn-salvar" type="button">Salvar Funcionário na Planilha</button>
+        </div>
+
+        <div class="content-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="color: #38bdf8; font-size: 16px;">Funcionários Cadastrados</h3>
+                <button onclick="forcarAtualizacaoFuncionarios()" style="background: #1e3a5f; color: #38bdf8; border: 1px solid #00d4ff; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">🔄 Atualizar Lista</button>
+            </div>
+            
+            <div id="loadingFuncionarios" style="text-align: center; color: #94a3b8; font-size: 13px; padding: 20px;">Carregando funcionários...</div>
+            <div id="gridFuncionarios" class="funcionarios-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzm9jYbJH_l-J2nlp34y_V2pZVYhaXKyMbvqE-Ei6cQzvZ1deUYrPpXWzdanSEflDjt/exec";
+
+        function obterIdEmpresaAtiva() {
+            const usuario = JSON.parse(localStorage.getItem('pcm_usuario') || '{}');
+            if (!usuario.idEmpresa) {
+                alert('Sessão expirada ou usuário não logado. Faça login novamente.');
+                window.location.href = 'login.html';
+                return null;
+            }
+            return String(usuario.idEmpresa).trim();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const btnVoltar = document.getElementById('btnVoltarPainel');
+            if (btnVoltar) {
+                btnVoltar.addEventListener('click', () => {
+                    window.location.href = '0painel-master.html';
+                });
+            }
+
+            const inputMatricula = document.getElementById('func-matricula');
+            const spanErro = document.getElementById('erro-matricula');
+
+            inputMatricula.addEventListener('input', (e) => {
+                let valor = e.target.value.replace(/\D/g, '');
+                if (valor.length > 6) valor = valor.slice(0, 6);
+                e.target.value = valor;
+
+                if (valor.length > 0 && valor.length !== 6) {
+                    inputMatricula.classList.add('input-erro');
+                    spanErro.style.display = 'block';
+                    spanErro.textContent = '❌ A matrícula deve ter exatamente até 6 dígitos numéricos.';
+                } else {
+                    inputMatricula.classList.remove('input-erro');
+                    spanErro.style.display = 'none';
+                }
+            });
+
+            document.getElementById('btn-salvar-funcionario').addEventListener('click', salvarFuncionario);
+            
+            carregarSetoresSelect();
+            carregarFuncionarios(false);
+        });
+
+        async function carregarSetoresSelect() {
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) return;
+
+            const selectSetor = document.getElementById('func-setor');
+            const cacheKey = `pcm_setores_${idEmpresa}`;
+            const dadosCache = sessionStorage.getItem(cacheKey);
+
+            if (dadosCache) {
+                preencherSelectSetores(JSON.parse(dadosCache));
+                return;
+            }
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ acao: 'listarSetores', idEmpresa: idEmpresa })
+                });
+                const res = await response.json();
+
+                if (res.sucesso && res.setores) {
+                    sessionStorage.setItem(cacheKey, JSON.stringify(res.setores));
+                    preencherSelectSetores(res.setores);
+                } else {
+                    selectSetor.innerHTML = '<option value="">Nenhum setor cadastrado</option>';
+                }
+            } catch (erro) {
+                selectSetor.innerHTML = '<option value="">Erro ao carregar setores</option>';
+            }
+        }
+
+        function preencherSelectSetores(setores) {
+            const selectSetor = document.getElementById('func-setor');
+            selectSetor.innerHTML = '<option value="">Selecione o setor...</option>';
+            if (setores.length > 0) {
+                setores.forEach(setor => {
+                    const opt = document.createElement('option');
+                    opt.value = setor.nome;
+                    opt.textContent = setor.nome;
+                    selectSetor.appendChild(opt);
+                });
+            } else {
+                selectSetor.innerHTML = '<option value="">Nenhum setor cadastrado</option>';
+            }
+        }
+
+        async function salvarFuncionario() {
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) return;
+
+            const nome = document.getElementById('func-nome').value.trim().toUpperCase();
+            const matricula = document.getElementById('func-matricula').value.trim();
+            const setor = document.getElementById('func-setor').value;
+            const cargo = document.getElementById('func-cargo').value;
+            const foto = document.getElementById('func-foto').value.trim();
+            
+            if (!nome || !matricula || !setor || !cargo || !foto) {
+                alert('❌ Preencha todos os 5 campos obrigatórios (Nome, Matrícula, Setor, Cargo e Foto)!');
+                return;
+            }
+
+            if (!/^\d{1,6}$/.test(matricula)) {
+                alert('❌ A matrícula deve conter apenas números e no máximo 6 dígitos!');
+                document.getElementById('func-matricula').focus();
+                return;
+            }
+
+            const btnSalvar = document.getElementById('btn-salvar-funcionario');
+            btnSalvar.disabled = true;
+            btnSalvar.textContent = 'A verificar e salvar...';
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        acao: 'cadastrarFuncionario',
+                        idEmpresa: idEmpresa,
+                        nome: nome,
+                        matricula: matricula,
+                        setor: setor,
+                        cargo: cargo,
+                        foto: foto
+                    })
+                });
+
+                const res = await response.json();
+
+                if (res && res.sucesso) {
+                    alert(`✅ Funcionário cadastrado com sucesso!\n\n🔑 Credenciais de Acesso Geradas:\nUsuário: ${res.usuario}\nSenha: ${res.senha}`);
+                    
+                    document.getElementById('func-nome').value = '';
+                    document.getElementById('func-matricula').value = '';
+                    document.getElementById('func-setor').value = '';
+                    document.getElementById('func-cargo').value = '';
+                    document.getElementById('func-foto').value = '';
+                    document.getElementById('func-matricula').classList.remove('input-erro');
+                    document.getElementById('erro-matricula').style.display = 'none';
+
+                    // Limpa a cache de funcionários para forçar a atualização imediata na grelha
+                    sessionStorage.removeItem(`pcm_funcs_${idEmpresa}`);
+                    carregarFuncionarios(true);
+                } else {
+                    alert('⚠️ ' + (res ? res.erro : 'Erro desconhecido ao salvar.'));
+                }
+            } catch (erro) {
+                alert('❌ Erro de conexão ao salvar funcionário.');
+            } finally {
+                btnSalvar.disabled = false;
+                btnSalvar.textContent = 'Salvar Funcionário na Planilha';
+            }
+        }
+
+        function forcarAtualizacaoFuncionarios() {
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) return;
+            sessionStorage.removeItem(`pcm_funcs_${idEmpresa}`);
+            sessionStorage.removeItem(`pcm_setores_${idEmpresa}`);
+            carregarSetoresSelect();
+            carregarFuncionarios(true);
+        }
+
+        async function carregarFuncionarios(forcarServidor = false) {
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) return;
+
+            const grid = document.getElementById('gridFuncionarios');
+            const loading = document.getElementById('loadingFuncionarios');
+            const cacheKey = `pcm_funcs_${idEmpresa}`;
+            const dadosCache = sessionStorage.getItem(cacheKey);
+
+            if (dadosCache && !forcarServidor) {
+                renderizarGridFuncionarios(JSON.parse(dadosCache));
+                loading.style.display = 'none';
+                return;
+            }
+
+            loading.style.display = 'block';
+            if (!dadosCache) grid.innerHTML = '';
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ acao: 'listarFuncionarios', idEmpresa: idEmpresa })
+                });
+                const res = await response.json();
+
+                loading.style.display = 'none';
+
+                if (res.sucesso && res.funcionarios) {
+                    sessionStorage.setItem(cacheKey, JSON.stringify(res.funcionarios));
+                    renderizarGridFuncionarios(res.funcionarios);
+                } else {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #64748b; font-size: 13px; padding: 15px;">Nenhum funcionário cadastrado para esta empresa.</div>';
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #f87171; font-size: 13px; padding: 15px;">Erro ao carregar os funcionários da planilha.</div>';
+            }
+        }
+
+        function renderizarGridFuncionarios(listaFuncionarios) {
+            const grid = document.getElementById('gridFuncionarios');
+            grid.innerHTML = '';
+
+            if (!listaFuncionarios || listaFuncionarios.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #64748b; font-size: 13px; padding: 15px;">Nenhum funcionário cadastrado para esta empresa.</div>';
+                return;
+            }
+
+            listaFuncionarios.forEach(func => {
+                const card = document.createElement('div');
+                card.className = 'funcionario-card';
+                const fotoSrc = func.foto ? func.foto : 'https://via.placeholder.com/80?text=Sem+Foto';
+
+                card.innerHTML = `
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <img src="${fotoSrc}" alt="Foto" class="foto-funcionario" onerror="this.src='https://via.placeholder.com/80?text=Erro';">
+                        <div style="overflow: hidden;">
+                            <h4 style="color: #00d4ff; font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${func.nome}">👤 ${func.nome}</h4>
+                            <p style="font-size: 11px; color: #cbd5e1; margin-bottom: 1px;"><strong>Mat:</strong> ${func.matricula}</p>
+                            <p style="font-size: 11px; color: #cbd5e1; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><strong>Setor:</strong> ${func.setor}</p>
+                            <p style="font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><strong>Cargo:</strong> ${func.cargo}</p>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>

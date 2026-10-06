@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM-360 - Cadastro de Empresas</title>
+    <!-- Biblioteca externa IMask.js para criar a máscara visual e formatação automática do CNPJ -->
+    <script src="https://unpkg.com/imask"></script>
+    <style>
+        /* Estilizações globais e reset básico */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Configuração do fundo da página com imagem estática e gradiente escuro de sobreposição */
+        body {
+            background-color: #051622;
+            background-image: linear-gradient(rgba(5, 22, 34, 0.75), rgba(5, 22, 34, 0.85)), url('logo-pcm360.png');
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            color: #ffffff; min-height: 100vh; padding: 15px;
+        }
+
+        /* Container principal centralizado com efeito de vidro translúcido (backdrop-filter) */
+        .container { max-width: 950px; margin: 0 auto; background: rgba(8, 30, 48, 0.9); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3); padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); }
+        
+        /* Cabeçalho interno e botão de retorno */
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3a5f; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        
+        /* Logo pequena no cabeçalho */
+        .header-logo { height: 40px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+
+        /* Título centralizado */
+        .header h2 { color: #00d4ff; font-size: 16px; text-align: center; flex: 1; }
+
+        .btn-voltar { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s; }
+        .btn-voltar:hover { background: #475569; }
+        
+        /* Seção do formulário e da listagem */
+        .content-section { background: rgba(2, 12, 20, 0.6); padding: 15px; border-radius: 8px; border: 1px solid #1e3a5f; margin-bottom: 20px; }
+        
+        /* Estrutura de colunas do formulário baseada em Grid CSS */
+        .form-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .form-row-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 15px; }
+        
+        /* Estilização dos campos de entrada de texto e número */
+        input { width: 100%; padding: 10px; background: rgba(2, 12, 20, 0.8); border: 1px solid #1e3a5f; border-radius: 6px; color: #fff; margin-top: 5px; font-size: 14px; }
+        input:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 8px rgba(0, 212, 255, 0.4); }
+        
+        /* Botão principal de salvar */
+        .btn-salvar { background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; margin-bottom: 10px; }
+        .btn-salvar:hover { opacity: 0.9; }
+        .btn-salvar:disabled { background: #64748b; cursor: not-allowed; }
+
+        /* Grid dos blocos de empresas cadastradas */
+        .empresas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+        .empresa-card { background: rgba(4, 18, 30, 0.9); border: 1px solid #1e3a5f; border-radius: 8px; padding: 15px; transition: transform 0.2s, border-color 0.2s; border-left: 4px solid #00d4ff; display: flex; flex-direction: column; justify-content: space-between; }
+        .empresa-card:hover { transform: translateY(-2px); border-color: #00d4ff; }
+
+        /* Espaço reservado para a Logo no Card */
+        .card-header-area { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; border-bottom: 1px solid #1e3a5f; padding-bottom: 8px; }
+        .empresa-logo-box { width: 45px; height: 45px; border-radius: 6px; background: rgba(2, 12, 20, 0.8); border: 1px solid #1e3a5f; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+        .empresa-logo-box img { width: 100%; height: 100%; object-fit: contain; }
+
+        /* Botões de Ação no Card (Pausar/Ativar, Editar, Excluir) */
+        .card-actions { display: flex; gap: 6px; margin-top: 12px; border-top: 1px solid #1e3a5f; padding-top: 10px; }
+        .btn-card-pausar { background: #d97706; color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; flex: 1.2; text-align: center; }
+        .btn-card-pausar:hover { background: #b45309; }
+        .btn-card-ativar { background: #059669; color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; flex: 1.2; text-align: center; }
+        .btn-card-ativar:hover { background: #047857; }
+        .btn-card-edit { background: #0284c7; color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; flex: 1; text-align: center; }
+        .btn-card-edit:hover { background: #0369a1; }
+        .btn-card-delete { background: #dc2626; color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; flex: 1; text-align: center; }
+        .btn-card-delete:hover { background: #b91c1c; }
+
+        /* Estilo dos Modais (Sucesso e Edição) */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 999; justify-content: center; align-items: center; padding: 15px; }
+        .modal-content { background: #081e30; border: 1px solid #00d4ff; border-radius: 12px; width: 100%; max-width: 420px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
+
+        /* Responsividade para telas menores e dispositivos móveis */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 12px; }
+            .form-row, .form-row-2 { grid-template-columns: 1fr; gap: 10px; }
+            .header h2 { font-size: 14px; order: 3; width: 100%; text-align: center; }
+            .header { justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Cabeçalho Principal da Tela -->
+        <div class="header">
+            <img src="logo-pcm360.png" alt="Logo" class="header-logo">
+            <h2>PCM-360 — Cadastro de Empresas</h2>
+            <button id="btnVoltarPainel" class="btn-voltar" type="button">⬅ Voltar ao Painel</button>
+        </div>
+
+        <!-- Seção do Formulário -->
+        <div class="content-section">
+            <h3 style="color: #38bdf8; margin-bottom: 15px; font-size: 16px;">Cadastrar Nova Empresa</h3>
+            
+            <div class="form-row">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Nome da Empresa</label>
+                    <input type="text" id="emp-nome" class="campo-navegavel">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">CNPJ</label>
+                    <input type="text" id="emp-cnpj" class="campo-navegavel" placeholder="00.000.000/0000-00">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Limite de IDs</label>
+                    <input type="number" id="emp-limite" class="campo-navegavel" min="1" value="10">
+                </div>
+            </div>
+
+            <div class="form-row-2">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Estado</label>
+                    <input type="text" id="emp-estado" class="campo-navegavel" placeholder="Ex: CE">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Cidade</label>
+                    <input type="text" id="emp-cidade" class="campo-navegavel">
+                </div>
+            </div>
+            
+            <button id="btn-salvar-empresa" class="btn-salvar" type="button">Salvar Empresa na Planilha</button>
+        </div>
+
+        <!-- Seção de Blocos das Empresas Cadastradas -->
+        <div class="content-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="color: #38bdf8; font-size: 16px;">Empresas Cadastradas na Planilha</h3>
+                <button onclick="carregarEmpresas()" style="background: #1e3a5f; color: #38bdf8; border: 1px solid #00d4ff; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">🔄 Atualizar Lista</button>
+            </div>
+            
+            <div id="loadingEmpresas" style="text-align: center; color: #94a3b8; font-size: 13px; padding: 20px;">Carregando empresas...</div>
+            <div id="gridEmpresas" class="empresas-grid"></div>
+        </div>
+    </div>
+
+    <!-- Modal Exibido com Sucesso contendo o Usuário e a Senha Provisória gerados -->
+    <div id="modalSucesso" class="modal-overlay">
+        <div class="modal-content" style="text-align: center;">
+            <div style="font-size: 36px; margin-bottom: 10px;">🎉</div>
+            <h3 style="color: #00d4ff; font-size: 18px; margin-bottom: 8px;">Empresa Cadastrada!</h3>
+            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 15px;">Anote as credenciais provisórias para repassar ao cliente:</p>
+            
+            <div style="background: rgba(2,12,20,0.8); border: 1px solid #1e3a5f; padding: 12px; border-radius: 6px; text-align: left; margin-bottom: 20px;">
+                <p style="font-size: 11px; color: #94a3b8;">Usuário de Acesso:</p>
+                <p id="resUsuario" style="color: #38bdf8; font-family: monospace; font-weight: bold; font-size: 14px; margin-bottom: 8px; user-select: all;"></p>
+                
+                <p style="font-size: 11px; color: #94a3b8;">Senha Provisória:</p>
+                <p id="resSenha" style="color: #fbbf24; font-family: monospace; font-weight: bold; font-size: 14px; user-select: all;"></p>
+            </div>
+
+            <button onclick="fecharModal()" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%;">Concluir</button>
+        </div>
+    </div>
+
+    <!-- Modal de Edição de Empresa -->
+    <div id="modalEdicao" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color: #00d4ff; font-size: 16px; margin-bottom: 15px; text-align: center;">Editar Empresa</h3>
+            <input type="hidden" id="edit-id">
+            
+            <div style="margin-bottom: 10px;">
+                <label style="font-size:12px; color:#cbd5e1;">Nome da Empresa</label>
+                <input type="text" id="edit-nome">
+            </div>
+            <div style="margin-bottom: 10px;">
+                <label style="font-size:12px; color:#cbd5e1;">CNPJ</label>
+                <input type="text" id="edit-cnpj">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Estado</label>
+                    <input type="text" id="edit-estado">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Cidade</label>
+                    <input type="text" id="edit-cidade">
+                </div>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label style="font-size:12px; color:#cbd5e1;">Limite de IDs</label>
+                <input type="number" id="edit-limite">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="salvarEdicaoEmpresa()" style="background: #10b981; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer; flex: 1;">Salvar Alterações</button>
+                <button onclick="fecharModalEdicao()" style="background: #334155; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer; flex: 1;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE LÓGICA E CONEXÃO COM O BACKEND -->
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzm9jYbJH_l-J2nlp34y_V2pZVYhaXKyMbvqE-Ei6cQzvZ1deUYrPpXWzdanSEflDjt/exec";
+        let cnpjMaskInstance = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const btnVoltar = document.getElementById('btnVoltarPainel');
+            if (btnVoltar) {
+                btnVoltar.addEventListener('click', () => {
+                    window.location.href = '0painel-master.html';
+                });
+            }
+
+            const inputCnpj = document.getElementById('emp-cnpj');
+            if (inputCnpj) {
+                cnpjMaskInstance = IMask(inputCnpj, {
+                    mask: '00.000.000/0000-00',
+                    lazy: false
+                });
+            }
+
+            const camposNavegaveis = document.querySelectorAll('.campo-navegavel');
+            camposNavegaveis.forEach((campo, index) => {
+                campo.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const proximoCampo = camposNavegaveis[index + 1];
+                        if (proximoCampo) {
+                            proximoCampo.focus();
+                        } else {
+                            const btnSalvar = document.getElementById('btn-salvar-empresa');
+                            if (btnSalvar) btnSalvar.focus();
+                        }
+                    }
+                });
+            });
+
+            const btnSalvar = document.getElementById('btn-salvar-empresa');
+            if (btnSalvar) {
+                btnSalvar.addEventListener('click', salvarEmpresa);
+            }
+
+            carregarEmpresas();
+        });
+
+        async function salvarEmpresa() {
+            const nome = document.getElementById('emp-nome').value.trim();
+            const cnpj = cnpjMaskInstance ? cnpjMaskInstance.value.trim() : document.getElementById('emp-cnpj').value.trim();
+            const estado = document.getElementById('emp-estado').value.trim().toUpperCase();
+            const cidade = document.getElementById('emp-cidade').value.trim();
+            const limiteIds = parseInt(document.getElementById('emp-limite').value) || 10;
+            
+            if(!nome || !cnpj || !estado || !cidade) {
+                alert('Preencha todos os campos!');
+                return;
+            }
+
+            const btnSalvar = document.getElementById('btn-salvar-empresa');
+            btnSalvar.disabled = true;
+            btnSalvar.textContent = 'Salvando...';
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        acao: 'cadastrarEmpresa',
+                        nome, cnpj, estado, cidade, limiteIds
+                    })
+                });
+                
+                const res = await response.json();
+
+                if (res && res.sucesso) {
+                    document.getElementById('emp-nome').value = '';
+                    if (cnpjMaskInstance) cnpjMaskInstance.value = '';
+                    else document.getElementById('emp-cnpj').value = '';
+                    document.getElementById('emp-estado').value = '';
+                    document.getElementById('emp-cidade').value = '';
+                    document.getElementById('emp-limite').value = '10';
+
+                    document.getElementById('resUsuario').textContent = res.usuario;
+                    document.getElementById('resSenha').textContent = res.senhaProvisoria;
+                    document.getElementById('modalSucesso').style.display = 'flex';
+
+                    carregarEmpresas();
+                } else {
+                    alert('Erro ao salvar: ' + (res ? res.erro : 'Desconhecido'));
+                }
+            } catch (err) {
+                alert('Erro de conexão ao salvar.');
+            } finally {
+                btnSalvar.disabled = false;
+                btnSalvar.textContent = 'Salvar Empresa na Planilha';
+            }
+        }
+
+        async function carregarEmpresas() {
+            const grid = document.getElementById('gridEmpresas');
+            const loading = document.getElementById('loadingEmpresas');
+            loading.style.display = 'block';
+            grid.innerHTML = '';
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ acao: 'listarEmpresas' })
+                });
+                const res = await response.json();
+
+                loading.style.display = 'none';
+
+                if (res.sucesso && res.empresas && res.empresas.length > 0) {
+                    res.empresas.forEach(emp => {
+                        const card = document.createElement('div');
+                        card.className = 'empresa-card';
+                        
+                        const conteudoLogo = emp.linkImagem 
+                            ? `<img src="${emp.linkImagem}" alt="Logo">` 
+                            : `<span style="font-size: 20px;">🏢</span>`;
+
+                        // Tratamento do status (Ativo / Pausado)
+                        const isPausado = emp.status === 'Pausado';
+                        const btnStatusClass = isPausado ? 'btn-card-ativar' : 'btn-card-pausar';
+                        const btnStatusText = isPausado ? '▶ Ativar' : '⏸ Pausar';
+                        const novoStatusTarget = isPausado ? 'Ativo' : 'Pausado';
+                        const avisoPausado = isPausado ? `<div style="background: rgba(220, 38, 38, 0.2); border: 1px solid #dc2626; padding: 4px; border-radius: 4px; text-align: center; font-size: 11px; color: #f87171; margin-bottom: 8px; font-weight: bold;">⚠️ ACESSO PAUSADO</div>` : '';
+
+                        card.innerHTML = `
+                            <div>
+                                ${avisoPausado}
+                                <div class="card-header-area">
+                                    <div class="empresa-logo-box">
+                                        ${conteudoLogo}
+                                    </div>
+                                    <div style="overflow: hidden;">
+                                        <h4 style="color: #00d4ff; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${emp.nomeEmpresa}">${emp.nomeEmpresa}</h4>
+                                        <p style="font-size: 11px; color: #94a3b8; font-family: monospace;">ID: ${emp.idEmpresa}</p>
+                                    </div>
+                                </div>
+                                <p style="font-size: 12px; color: #94a3b8; margin-bottom: 3px;"><strong>CNPJ:</strong> ${emp.cnpj}</p>
+                                <p style="font-size: 12px; color: #94a3b8; margin-bottom: 6px;"><strong>Local:</strong> ${emp.cidade} / ${emp.estado} | <strong>IDs:</strong> ${emp.limiteIds}</p>
+                                <div style="background: rgba(2, 12, 20, 0.7); padding: 8px; border-radius: 4px; border: 1px solid #1e3a5f; margin-top: 8px;">
+                                    <p style="font-size: 11px; color: #cbd5e1;">Usuário: <span style="color: #38bdf8; font-family: monospace;">${emp.usuario}</span></p>
+                                    <p style="font-size: 11px; color: #cbd5e1;">Senha Atual: <span style="color: #fbbf24; font-family: monospace;">${emp.senha}</span></p>
+                                </div>
+                            </div>
+                            <div class="card-actions">
+                                <button class="${btnStatusClass}" onclick='alternarStatus("${emp.idEmpresa}", "${novoStatusTarget}")'>${btnStatusText}</button>
+                                <button class="btn-card-edit" onclick='abrirEdicao(${JSON.stringify(emp)})'>✏️</button>
+                                <button class="btn-card-delete" onclick='deletarEmpresa("${emp.idEmpresa}")'>🗑️</button>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                } else {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #64748b; font-size: 13px; padding: 15px;">Nenhuma empresa cadastrada na planilha.</div>';
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #f87171; font-size: 13px; padding: 15px;">Erro ao carregar os dados da planilha.</div>';
+            }
+        }
+
+        async function alternarStatus(idEmpresa, status) {
+            const acaoTexto = status === 'Pausado' ? 'pausar o acesso de' : 'ativar novamente';
+            if (!confirm(`Deseja realmente ${acaoTexto} esta empresa?`)) return;
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        acao: 'alternarStatusEmpresa',
+                        idEmpresa: idEmpresa,
+                        status: status
+                    })
+                });
+                const res = await response.json();
+                if (res.sucesso) {
+                    carregarEmpresas();
+                } else {
+                    alert('Erro ao alterar status: ' + res.erro);
+                }
+            } catch (err) {
+                alert('Erro de conexão ao alterar status da empresa.');
+            }
+        }
+
+        function abrirEdicao(emp) {
+            document.getElementById('edit-id').value = emp.idEmpresa;
+            document.getElementById('edit-nome').value = emp.nomeEmpresa;
+            document.getElementById('edit-cnpj').value = emp.cnpj;
+            document.getElementById('edit-estado').value = emp.estado;
+            document.getElementById('edit-cidade').value = emp.cidade;
+            document.getElementById('edit-limite').value = emp.limiteIds;
+            document.getElementById('modalEdicao').style.display = 'flex';
+        }
+
+        function fecharModalEdicao() {
+            document.getElementById('modalEdicao').style.display = 'none';
+        }
+
+        async function salvarEdicaoEmpresa() {
+            const idEmpresa = document.getElementById('edit-id').value;
+            const nomeEmpresa = document.getElementById('edit-nome').value.trim();
+            const cnpj = document.getElementById('edit-cnpj').value.trim();
+            const estado = document.getElementById('edit-estado').value.trim().toUpperCase();
+            const cidade = document.getElementById('edit-cidade').value.trim();
+            const limiteIds = parseInt(document.getElementById('edit-limite').value) || 10;
+
+            if (!nomeEmpresa || !cnpj) {
+                alert('Preencha os campos obrigatórios!');
+                return;
+            }
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        acao: 'atualizarEmpresa',
+                        idEmpresa, nomeEmpresa, cnpj, estado, cidade, limiteIds
+                    })
+                });
+                const res = await response.json();
+                if (res.sucesso) {
+                    fecharModalEdicao();
+                    carregarEmpresas();
+                } else {
+                    alert('Erro ao atualizar: ' + res.erro);
+                }
+            } catch (err) {
+                alert('Erro de conexão ao atualizar empresa.');
+            }
+        }
+
+        async function deletarEmpresa(idEmpresa) {
+            if (!confirm('Tem certeza que deseja excluir esta empresa da planilha?')) return;
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        acao: 'deletarEmpresa',
+                        idEmpresa
+                    })
+                });
+                const res = await response.json();
+                if (res.sucesso) {
+                    carregarEmpresas();
+                } else {
+                    alert('Erro ao excluir: ' + res.erro);
+                }
+            } catch (err) {
+                alert('Erro de conexão ao excluir empresa.');
+            }
+        }
+
+        function fecharModal() {
+            document.getElementById('modalSucesso').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

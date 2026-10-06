@@ -1,0 +1,715 @@
+/**
+ * ARQUIVO: Código.gs
+ * Sistema: PCM360 - Gestão de Manutenção
+ * Descrição: Centralizador doPost e rotas completas (CRUD) para Empresas, Setores, Funcionários, Ativos, OS e Login.
+ */
+
+function doPost(e) {
+  try {
+    const dados = JSON.parse(e.postData.contents);
+    const acao = dados.acao;
+    let resultado = { sucesso: false, erro: 'Ação desconhecida ou não especificada' };
+
+    switch (acao) {
+      // ================= LOGIN =================
+      case 'fazerLogin':
+        resultado = fazerLogin(dados);
+        break;
+
+      // ================= EMPRESAS =================
+      case 'cadastrarEmpresa':
+        resultado = cadastrarEmpresa(dados);
+        break;
+      case 'listarEmpresas':
+        resultado = listarEmpresas();
+        break;
+      case 'atualizarEmpresa':
+        resultado = atualizarEmpresa(dados);
+        break;
+      case 'alternarStatusEmpresa':
+        resultado = alternarStatusEmpresa(dados);
+        break;
+      case 'deletarEmpresa':
+        resultado = deletarEmpresa(dados);
+        break;
+
+      // ================= SETORES =================
+      case 'cadastrarSetor':
+        resultado = cadastrarSetor(dados);
+        break;
+      case 'listarSetores':
+        resultado = listarSetores(dados);
+        break;
+      case 'atualizarSetor':
+        resultado = atualizarSetor(dados);
+        break;
+      case 'deletarSetor':
+        resultado = deletarSetor(dados);
+        break;
+
+      // ================= FUNCIONÁRIOS =================
+      case 'cadastrarFuncionario':
+        resultado = cadastrarFuncionario(dados);
+        break;
+      case 'listarFuncionarios':
+        resultado = listarFuncionarios(dados);
+        break;
+      case 'atualizarFuncionario':
+        resultado = atualizarFuncionario(dados);
+        break;
+      case 'deletarFuncionario':
+        resultado = deletarFuncionario(dados);
+        break;
+
+      // ================= ATIVOS =================
+      case 'cadastrarAtivo':
+        resultado = cadastrarAtivo(dados);
+        break;
+      case 'listarAtivos':
+        resultado = listarAtivos(dados);
+        break;
+      case 'atualizarAtivo':
+        resultado = atualizarAtivo(dados);
+        break;
+      case 'deletarAtivo':
+        resultado = deletarAtivo(dados);
+        break;
+
+      // ================= ORDENS DE SERVIÇO (OS) =================
+      case 'cadastrarOS':
+        resultado = cadastrarOS(dados);
+        break;
+      case 'listarOS':
+        resultado = listarOS(dados);
+        break;
+      case 'atualizarOS':
+        resultado = atualizarOS(dados);
+        break;
+      case 'atualizarStatusOS':
+        resultado = atualizarStatusOS(dados);
+        break;
+      case 'deletarOS':
+        resultado = deletarOS(dados);
+        break;
+
+      default:
+        resultado = { sucesso: false, erro: `Ação inválida: ${acao}` };
+    }
+
+    return ContentService.createTextOutput(JSON.stringify(resultado))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (erro) {
+    return ContentService.createTextOutput(JSON.stringify({ sucesso: false, erro: erro.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({ status: "API PCM360 Rodando com Sucesso!" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+// ==================== MÓDULO DE LOGIN ====================
+function fazerLogin(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Empresas');
+  if (!planilha) return { sucesso: false, erro: 'Aba Empresas não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  const usuarioInput = String(dados.usuario || '').trim();
+  const senhaInput = String(dados.senha || '').trim();
+
+  for (let i = 1; i < linhas.length; i++) {
+    const linha = linhas[i];
+    const idEmpresa = String(linha[0] || '');
+    const nomeEmpresa = String(linha[1] || '');
+    const usuarioSalvo = String(linha[6] || '').trim();
+    const senhaSalva = String(linha[7] || '').trim();
+    const statusEmpresa = String(linha[9] || 'Ativo').trim();
+
+    if (usuarioSalvo.toLowerCase() === usuarioInput.toLowerCase() && senhaSalva === senhaInput) {
+      
+      if (statusEmpresa.toLowerCase() === 'pausado') {
+        return { sucesso: false, erro: 'Esta empresa está com o acesso pausado. Contacte o suporte.' };
+      }
+
+      return {
+        sucesso: true,
+        id: idEmpresa,
+        nome: nomeEmpresa,
+        cargo: 'empresa'
+      };
+    }
+  }
+
+  return { sucesso: false, erro: 'Usuário ou senha incorretos.' };
+}
+
+
+// ==================== MÓDULO DE EMPRESAS ====================
+function cadastrarEmpresa(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Empresas');
+  if (!planilha) return { sucesso: false, erro: 'Aba Empresas não encontrada' };
+
+  const idEmpresa = 'EMP_' + Date.now();
+  const cnpjLimpo = String(dados.cnpj || '').replace(/\D/g, '');
+  
+  const sufixoUser = cnpjLimpo.length >= 4 ? cnpjLimpo.slice(-6) : Math.floor(100000 + Math.random() * 900000);
+  const usuarioGerado = 'emp_' + sufixoUser;
+  const senhaProvisoria = Math.random().toString(36).slice(-8);
+
+  planilha.appendRow([
+    idEmpresa, 
+    dados.nomeEmpresa || dados.nome || '', 
+    dados.cnpj || '', 
+    dados.estado || '', 
+    dados.cidade || '', 
+    dados.limiteIds || dados.qtId || '', 
+    usuarioGerado, 
+    senhaProvisoria,
+    converterLinkDrive(dados.linkImagem || ''),
+    'Ativo'
+  ]);
+
+  forcarTextoPreto(planilha);
+
+  return { 
+    sucesso: true, 
+    idEmpresa: idEmpresa, 
+    usuario: usuarioGerado, 
+    senhaProvisoria: senhaProvisoria 
+  };
+}
+
+function listarEmpresas() {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Empresas');
+  if (!planilha) return { sucesso: false, erro: 'Aba Empresas não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  const empresas = [];
+
+  for (let i = 1; i < linhas.length; i++) {
+    const linha = linhas[i];
+    if (!linha[0]) continue;
+    empresas.push({
+      idEmpresa: linha[0],
+      nomeEmpresa: linha[1],
+      cnpj: linha[2],
+      estado: linha[3],
+      cidade: linha[4],
+      limiteIds: linha[5],
+      usuario: linha[6],
+      senha: linha[7],
+      linkImagem: converterLinkDrive(linha[8] || ''),
+      status: linha[9] || 'Ativo'
+    });
+  }
+  return { sucesso: true, empresas: empresas };
+}
+
+function atualizarEmpresa(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Empresas');
+  if (!planilha) return { sucesso: false, erro: 'Aba Empresas não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][0]) === String(dados.idEmpresa)) {
+      const rowNum = i + 1;
+      if (dados.nomeEmpresa || dados.nome) planilha.getRange(rowNum, 2).setValue(dados.nomeEmpresa || dados.nome);
+      if (dados.cnpj) planilha.getRange(rowNum, 3).setValue(dados.cnpj);
+      if (dados.estado) planilha.getRange(rowNum, 4).setValue(dados.estado);
+      if (dados.cidade) planilha.getRange(rowNum, 5).setValue(dados.cidade);
+      if (dados.limiteIds !== undefined || dados.qtId !== undefined) planilha.getRange(rowNum, 6).setValue(dados.limiteIds || dados.qtId);
+      if (dados.linkImagem !== undefined) planilha.getRange(rowNum, 9).setValue(converterLinkDrive(dados.linkImagem));
+      
+      forcarTextoPreto(planilha);
+      return { sucesso: true };
+    }
+  }
+  return { sucesso: false, erro: 'Empresa não encontrada para atualização' };
+}
+
+function alternarStatusEmpresa(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Empresas');
+  if (!planilha) return { sucesso: false, erro: 'Aba Empresas não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][0]) === String(dados.idEmpresa)) {
+      const rowNum = i + 1;
+      const novoStatus = dados.status || 'Ativo';
+      planilha.getRange(rowNum, 10).setValue(novoStatus);
+
+      forcarTextoPreto(planilha);
+      return { sucesso: true, novoStatus: novoStatus };
+    }
+  }
+  return { sucesso: false, erro: 'Empresa não encontrada para alterar status' };
+}
+
+function deletarEmpresa(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Empresas');
+  if (!planilha) return { sucesso: false, erro: 'Aba Empresas não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][0]) === String(dados.idEmpresa)) {
+      planilha.deleteRow(i + 1);
+      return { sucesso: true };
+    }
+  }
+  return { sucesso: false, erro: 'Empresa não encontrada para exclusão' };
+}
+
+
+// ==================== MÓDULO DE SETORES ====================
+function cadastrarSetor(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Setores');
+  if (!planilha) return { sucesso: false, erro: 'Aba Setores não encontrada' };
+
+  const idSetor = Date.now();
+  planilha.appendRow([idSetor, dados.idEmpresa || '', dados.nome || '', dados.responsaveis || '']);
+  forcarTextoPreto(planilha);
+  return { sucesso: true, id: idSetor };
+}
+
+function listarSetores(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Setores');
+  if (!planilha) return { sucesso: false, erro: 'Aba Setores não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  const setores = [];
+  const idEmpresaFiltro = dados && dados.idEmpresa ? String(dados.idEmpresa) : null;
+
+  for (let i = 1; i < linhas.length; i++) {
+    const linha = linhas[i];
+    if (!linha[0]) continue;
+
+    const idEmpresaLinha = String(linha[1] || '');
+    if (idEmpresaFiltro && idEmpresaFiltro !== '' && idEmpresaLinha !== idEmpresaFiltro) {
+      continue;
+    }
+
+    setores.push({
+      id: linha[0],
+      idEmpresa: idEmpresaLinha,
+      nome: linha[2],
+      responsaveis: linha[3]
+    });
+  }
+  return { sucesso: true, setores: setores };
+}
+
+function atualizarSetor(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Setores');
+  if (!planilha) return { sucesso: false, erro: 'Aba Setores não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][0]) === String(dados.id)) {
+      const rowNum = i + 1;
+      if (dados.nome) planilha.getRange(rowNum, 3).setValue(dados.nome);
+      if (dados.responsaveis !== undefined) planilha.getRange(rowNum, 4).setValue(dados.responsaveis);
+
+      forcarTextoPreto(planilha);
+      return { sucesso: true };
+    }
+  }
+  return { sucesso: false, erro: 'Setor não encontrado para atualização' };
+}
+
+function deletarSetor(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Setores');
+  if (!planilha) return { sucesso: false, erro: 'Aba Setores não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][0]) === String(dados.id)) {
+      planilha.deleteRow(i + 1);
+      return { sucesso: true };
+    }
+  }
+  return { sucesso: false, erro: 'Setor não encontrado para exclusão' };
+}
+
+
+// ==================== MÓDULO DE FUNCIONÁRIOS (OTIMIZADO) ====================
+function cadastrarFuncionario(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Funcionario');
+  if (!planilha) return { sucesso: false, erro: 'Aba Funcionario não encontrada' };
+
+  const idEmpresaAtual = String(dados.idEmpresa || '').trim();
+  const nomeNovo = String(dados.nome || '').trim().toUpperCase();
+  const matriculaNova = String(dados.matricula || '').trim();
+  const setorNovo = String(dados.setor || '').trim();
+  const cargoNovo = String(dados.cargo || '').trim();
+  const fotoNova = String(dados.foto || '').trim();
+
+  if (!idEmpresaAtual || !nomeNovo || !matriculaNova || !setorNovo || !cargoNovo || !fotoNova) {
+    return { sucesso: false, erro: 'Preencha todos os 5 campos obrigatórios: Nome, Matrícula, Setor, Cargo e Foto.' };
+  }
+
+  if (!/^\d+$/.test(matriculaNova) || matriculaNova.length > 6) {
+    return { sucesso: false, erro: 'A matrícula deve conter apenas números e no máximo 6 dígitos!' };
+  }
+
+  const ultimaLinha = planilha.getLastRow();
+  
+  if (ultimaLinha >= 2) {
+    const valores = planilha.getRange(2, 1, ultimaLinha - 1, 4).getValues();
+    for (let i = 0; i < valores.length; i++) {
+      const empresaRow = String(valores[i][0] || '').trim();
+      const matriculaCadastrada = String(valores[i][3] || '').trim();
+      
+      if (empresaRow === idEmpresaAtual && matriculaCadastrada === matriculaNova) {
+        return { sucesso: false, erro: 'Já existe um funcionário cadastrado com esta Matrícula!' };
+      }
+    }
+  }
+
+  const idFunc = Date.now();
+  const usuarioGerado = 'func_' + matriculaNova;
+  const senhaGerada = Math.random().toString(36).slice(-6).toUpperCase();
+
+  planilha.appendRow([
+    idEmpresaAtual,
+    idFunc, 
+    nomeNovo, 
+    matriculaNova, 
+    setorNovo, 
+    cargoNovo,
+    converterLinkDrive(fotoNova),
+    usuarioGerado,
+    senhaGerada
+  ]);
+  
+  forcarTextoPreto(planilha);
+  
+  return { 
+    sucesso: true, 
+    id: idFunc, 
+    usuario: usuarioGerado, 
+    senha: senhaGerada 
+  };
+}
+
+function listarFuncionarios(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Funcionario');
+  if (!planilha) return { sucesso: false, erro: 'Aba Funcionario não encontrada' };
+
+  const ultimaLinha = planilha.getLastRow();
+  if (ultimaLinha < 2) return { sucesso: true, funcionarios: [] };
+
+  const valores = planilha.getRange(2, 1, ultimaLinha - 1, 7).getValues();
+  const funcionarios = [];
+  const idEmpresaBuscada = dados && dados.idEmpresa ? String(dados.idEmpresa).trim() : '';
+
+  for (let i = 0; i < valores.length; i++) {
+    const row = valores[i];
+    const idEmpresaPlanilha = String(row[0] || '').trim();
+    
+    if (idEmpresaBuscada && idEmpresaPlanilha === idEmpresaBuscada) {
+      funcionarios.push({
+        id: row[1],
+        nome: row[2],
+        matricula: row[3],
+        setor: row[4],
+        cargo: row[5],
+        foto: converterLinkDrive(row[6] || '')
+      });
+    }
+  }
+
+  return { sucesso: true, funcionarios: funcionarios };
+}
+
+function atualizarFuncionario(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Funcionario');
+  if (!planilha) return { sucesso: false, erro: 'Aba Funcionario não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][1]) === String(dados.id)) {
+      const rowNum = i + 1;
+      if (dados.nome) planilha.getRange(rowNum, 3).setValue(String(dados.nome).toUpperCase());
+      if (dados.matricula) planilha.getRange(rowNum, 4).setValue(String(dados.matricula));
+      if (dados.setor) planilha.getRange(rowNum, 5).setValue(dados.setor);
+      if (dados.cargo) planilha.getRange(rowNum, 6).setValue(dados.cargo);
+      if (dados.foto) planilha.getRange(rowNum, 7).setValue(converterLinkDrive(dados.foto));
+
+      forcarTextoPreto(planilha);
+      return { sucesso: true };
+    }
+  }
+  return { sucesso: false, erro: 'Funcionário não encontrado para atualização' };
+}
+
+function deletarFuncionario(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Funcionario');
+  if (!planilha) return { sucesso: false, erro: 'Aba Funcionario não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][1]) === String(dados.id)) {
+      planilha.deleteRow(i + 1);
+      return { sucesso: true };
+    }
+  }
+  return { sucesso: false, erro: 'Funcionário não encontrado para exclusão' };
+}
+
+
+// ==================== MÓDULO DE ATIVOS ====================
+function cadastrarAtivo(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Ativos');
+  if (!planilha) return { sucesso: false, erro: 'Aba Ativos não encontrada' };
+
+  const idEmpresaAtual = String(dados.idEmpresa || '').trim();
+  const modeloNovo = String(dados.modelo || '').trim().toUpperCase();
+  const ativoNovo = String(dados.ativo || '').trim();
+
+  if (!idEmpresaAtual || !modeloNovo || !ativoNovo) {
+    return { sucesso: false, erro: 'Preencha o modelo e o número do ativo.' };
+  }
+
+  // Validação: Verificar se já existe um ativo com o mesmo número para esta empresa
+  const ultimaLinha = planilha.getLastRow();
+  if (ultimaLinha >= 2) {
+    const valores = planilha.getRange(2, 1, ultimaLinha - 1, 4).getValues();
+    for (let i = 0; i < valores.length; i++) {
+      const empresaRow = String(valores[i][1] || '').trim(); // Coluna B: idEmpresa
+      const ativoCadastrado = String(valores[i][3] || '').replace(/^['"]/, '').trim(); // Coluna D: ativo
+      
+      if (empresaRow === idEmpresaAtual && ativoCadastrado === ativoNovo) {
+        return { sucesso: false, erro: '❌ Já existe um ativo cadastrado com este número (Ativo) para esta empresa!' };
+      }
+    }
+  }
+
+  const idAtivo = Date.now();
+  planilha.appendRow([
+    idAtivo, 
+    idEmpresaAtual,
+    modeloNovo, 
+    "'" + ativoNovo, 
+    dados.tipoMedicao || 'Horas', 
+    dados.leituraAtual ? Number(dados.leituraAtual) : 0,
+    converterLinkDrive(dados.foto1 || ''),
+    converterLinkDrive(dados.foto2 || ''),
+    converterLinkDrive(dados.foto3 || ''),
+    converterLinkDrive(dados.foto4 || '')
+  ]);
+  
+  forcarTextoPreto(planilha);
+  return { sucesso: true, id: idAtivo };
+}
+
+function listarAtivos(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Ativos');
+  if (!planilha) return { sucesso: false, erro: 'Aba Ativos não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  const ativos = [];
+  const idEmpresaFiltro = dados && dados.idEmpresa ? String(dados.idEmpresa) : null;
+
+  for (let i = 1; i < linhas.length; i++) {
+    const linha = linhas[i];
+    if (!linha[0]) continue;
+
+    const idEmpresaLinha = String(linha[1] || '');
+    if (idEmpresaFiltro && idEmpresaFiltro !== '' && idEmpresaLinha !== idEmpresaFiltro) {
+      continue;
+    }
+
+    ativos.push({
+      id: linha[0],
+      idEmpresa: idEmpresaLinha,
+      modelo: linha[2] || 'SEM MODELO',
+      ativo: String(linha[3] || '').replace(/^['"]/, '').trim(),
+      tipoMedicao: linha[4] || 'Horas',
+      leituraAtual: linha[5] !== undefined ? linha[5] : 0,
+      foto1: converterLinkDrive(linha[6] || ''),
+      foto2: converterLinkDrive(linha[7] || ''),
+      foto3: converterLinkDrive(linha[8] || ''),
+      foto4: converterLinkDrive(linha[9] || '')
+    });
+  }
+
+  return { sucesso: true, ativos: ativos };
+}
+
+function atualizarAtivo(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Ativos');
+  if (!planilha) return { sucesso: false, erro: 'Aba Ativos não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][0]) === String(dados.id)) {
+      const rowNum = i + 1;
+      if (dados.modelo) planilha.getRange(rowNum, 3).setValue(String(dados.modelo).toUpperCase());
+      if (dados.ativo) planilha.getRange(rowNum, 4).setValue("'" + String(dados.ativo).trim());
+      if (dados.tipoMedicao) planilha.getRange(rowNum, 5).setValue(dados.tipoMedicao);
+      if (dados.leituraAtual !== undefined) planilha.getRange(rowNum, 6).setValue(Number(dados.leituraAtual));
+      if (dados.foto1 !== undefined) planilha.getRange(rowNum, 7).setValue(converterLinkDrive(dados.foto1));
+      if (dados.foto2 !== undefined) planilha.getRange(rowNum, 8).setValue(converterLinkDrive(dados.foto2));
+      if (dados.foto3 !== undefined) planilha.getRange(rowNum, 9).setValue(converterLinkDrive(dados.foto3));
+      if (dados.foto4 !== undefined) planilha.getRange(rowNum, 10).setValue(converterLinkDrive(dados.foto4));
+
+      forcarTextoPreto(planilha);
+      return { sucesso: true };
+    }
+  }
+  return { sucesso: false, erro: 'Ativo não encontrado para atualização' };
+}
+
+function deletarAtivo(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Ativos');
+  if (!planilha) return { sucesso: false, erro: 'Aba Ativos não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][0]) === String(dados.id)) {
+      planilha.deleteRow(i + 1);
+      return { sucesso: true };
+    }
+  }
+  return { sucesso: false, erro: 'Ativo não encontrado para exclusão' };
+}
+
+
+// ==================== MÓDULO DE ORDENS DE SERVIÇO (OS) ====================
+function cadastrarOS(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('OrdensServico');
+  if (!planilha) return { sucesso: false, erro: 'Aba OrdensServico não encontrada!' };
+
+  const idOS = Date.now();
+  const dataAbertura = new Date().toLocaleDateString('pt-BR');
+
+  planilha.appendRow([
+    idOS,
+    dados.idEmpresa || '',
+    dados.setores || dados.setor || '',
+    dados.prioridade || 'Normal',
+    dados.equipamento || '',
+    dados.funcionario || '',
+    dados.descricao || '',
+    dados.pecas || '',
+    dados.observacao || '', 
+    'Aberta', 
+    dataAbertura
+  ]);
+
+  forcarTextoPreto(planilha);
+  return { sucesso: true, id: idOS };
+}
+
+function listarOS(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('OrdensServico');
+  if (!planilha) return { sucesso: false, erro: 'Aba OrdensServico não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  const ordens = [];
+  const idEmpresaFiltro = dados && dados.idEmpresa ? String(dados.idEmpresa) : null;
+
+  for (let i = 1; i < linhas.length; i++) {
+    const linha = linhas[i];
+    if (!linha[0]) continue;
+
+    const idEmpresaLinha = String(linha[1] || '');
+    if (idEmpresaFiltro && idEmpresaFiltro !== '' && idEmpresaLinha !== idEmpresaFiltro) {
+      continue;
+    }
+
+    ordens.push({
+      id: linha[0],
+      idEmpresa: idEmpresaLinha,
+      setor: linha[2],
+      prioridade: linha[3],
+      equipamento: linha[4],
+      funcionario: linha[5],
+      descricao: linha[6],
+      pecas: linha[7],
+      observacao: linha[8],
+      status: linha[9],
+      dataAbertura: linha[10]
+    });
+  }
+
+  return { sucesso: true, ordens: ordens };
+}
+
+function atualizarOS(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('OrdensServico');
+  if (!planilha) return { sucesso: false, erro: 'Aba OrdensServico não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][0]) === String(dados.id)) {
+      const rowNum = i + 1;
+      if (dados.setor || dados.setores) planilha.getRange(rowNum, 3).setValue(dados.setor || dados.setores);
+      if (dados.prioridade) planilha.getRange(rowNum, 4).setValue(dados.prioridade);
+      if (dados.equipamento) planilha.getRange(rowNum, 5).setValue(dados.equipamento);
+      if (dados.funcionario) planilha.getRange(rowNum, 6).setValue(dados.funcionario);
+      if (dados.descricao) planilha.getRange(rowNum, 7).setValue(dados.descricao);
+      if (dados.pecas !== undefined) planilha.getRange(rowNum, 8).setValue(dados.pecas);
+      if (dados.observacao !== undefined) planilha.getRange(rowNum, 9).setValue(dados.observacao);
+      if (dados.status) planilha.getRange(rowNum, 10).setValue(dados.status);
+
+      forcarTextoPreto(planilha);
+      return { sucesso: true };
+    }
+  }
+  return { sucesso: false, erro: 'OS não encontrada para atualização' };
+}
+
+function atualizarStatusOS(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('OrdensServico');
+  if (!planilha) return { sucesso: false, erro: 'Aba OrdensServico não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][0]) === String(dados.id)) {
+      const rowNum = i + 1;
+      if (dados.status) planilha.getRange(rowNum, 10).setValue(dados.status);
+      if (dados.observacao !== undefined) planilha.getRange(rowNum, 9).setValue(dados.observacao);
+
+      forcarTextoPreto(planilha);
+      return { sucesso: true };
+    }
+  }
+  return { sucesso: false, erro: 'OS não encontrada para atualizar status' };
+}
+
+function deletarOS(dados) {
+  const planilha = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('OrdensServico');
+  if (!planilha) return { sucesso: false, erro: 'Aba OrdensServico não encontrada' };
+
+  const linhas = planilha.getDataRange().getValues();
+  for (let i = 1; i < linhas.length; i++) {
+    if (String(linhas[i][0]) === String(dados.id)) {
+      planilha.deleteRow(i + 1);
+      return { sucesso: true };
+    }
+  }
+  return { sucesso: false, erro: 'OS não encontrada para exclusão' };
+}
+
+
+// ==================== UTILITÁRIOS ====================
+function converterLinkDrive(url) {
+  if (!url || typeof url !== 'string') return '';
+  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return `https://lh3.googleusercontent.com/d/${match[1]}=s1000`;
+  }
+  return url;
+}
+
+function forcarTextoPreto(planilha) {
+  const ultimaLinha = planilha.getLastRow();
+  const ultimaColuna = planilha.getLastColumn();
+  if (ultimaLinha > 1 && ultimaColuna > 0) {
+    planilha.getRange(2, 1, ultimaLinha - 1, ultimaColuna).setFontColor('#000000');
+  }
+}

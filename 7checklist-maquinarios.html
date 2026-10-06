@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM-360 - Checklist de Maquinários e Veículos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-image: url('fundo.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-6 text-slate-100 flex items-center justify-center">
+
+    <!-- Overlay escuro -->
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm -z-10"></div>
+
+    <!-- Container Principal -->
+    <div class="w-full max-w-4xl bg-slate-900/90 border border-slate-700/60 rounded-2xl shadow-2xl p-6 sm:p-8 backdrop-md">
+        
+        <!-- Cabeçalho -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 border-b border-slate-800 mb-6 gap-4">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold tracking-wider">PCM-<span class="text-emerald-500">360</span></h1>
+                <p class="text-slate-400 text-sm mt-1">Checklist Diário de Pré-Operação (Máquinas e Veículos)</p>
+            </div>
+            <a href="0painel-master.html" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Voltar ao Painel
+            </a>
+        </div>
+
+        <form id="checklistForm" class="space-y-6">
+            
+            <!-- Seleção de Tipo e Equipamento -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Tipo de Frota</label>
+                    <select id="tipoFrota" required class="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="">Selecione...</option>
+                        <option value="maquina">Máquina Pesada / Agrícola</option>
+                        <option value="veiculo">Veículo Leve / Utilitário</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Ativo / Placa / Equipamento</label>
+                    <input type="text" id="maquina" required placeholder="Ex: Trator 01 ou Placa ABC-1234" class="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Horímetro / KM Atual</label>
+                    <input type="text" id="horimetro" required placeholder="Ex: 4520 hrs ou 85400 km" class="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+            </div>
+
+            <!-- Lista de Itens do Checklist -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <h3 class="text-lg font-semibold text-emerald-400">Itens Obrigatórios de Verificação</h3>
+                    <span class="text-xs text-slate-400"><span class="text-emerald-400 font-bold">●</span> OK | <span class="text-rose-500 font-bold">●</span> NÃO OK</span>
+                </div>
+                
+                <div class="space-y-3" id="itensContainer">
+                    
+                    <!-- Item 1 -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg gap-3">
+                        <div>
+                            <p class="text-sm font-bold text-white">1. Níveis de Óleo e Fluidos</p>
+                            <p class="text-xs text-slate-400">Verificar nível do óleo do motor, água do arrefecimento/radiador e reservatórios.</p>
+                        </div>
+                        <div class="flex gap-3 w-full sm:w-auto justify-end">
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                <input type="radio" name="item1" value="OK" required class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                            </label>
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                <input type="radio" name="item1" value="Não OK" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Item 2 -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg gap-3">
+                        <div>
+                            <p class="text-sm font-bold text-white">2. Sistema de Freios e Estacionamento</p>
+                            <p class="text-xs text-slate-400">Testar a eficácia do pedal de freio e o travamento correto do freio de mão/estacionamento.</p>
+                        </div>
+                        <div class="flex gap-3 w-full sm:w-auto justify-end">
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                <input type="radio" name="item2" value="OK" required class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                            </label>
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                <input type="radio" name="item2" value="Não OK" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Item 3 -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg gap-3">
+                        <div>
+                            <p class="text-sm font-bold text-white">3. Pneus, Esteiras e Calibragem</p>
+                            <p class="text-xs text-slate-400">Inspecionar cortes, desgaste excessivo, calibragem adequada e estado dos pinos/esteiras.</p>
+                        </div>
+                        <div class="flex gap-3 w-full sm:w-auto justify-end">
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                <input type="radio" name="item3" value="OK" required class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                            </label>
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                <input type="radio" name="item3" value="Não OK" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Item 4 -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg gap-3">
+                        <div>
+                            <p class="text-sm font-bold text-white">4. Sistema Elétrico e Iluminação</p>
+                            <p class="text-xs text-slate-400">Conferir funcionamento de faróis, setas, luzes de freio, pisca-alerta, buzina e alarme de ré.</p>
+                        </div>
+                        <div class="flex gap-3 w-full sm:w-auto justify-end">
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                <input type="radio" name="item4" value="OK" required class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                            </label>
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                <input type="radio" name="item4" value="Não OK" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Item 5 -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg gap-3">
+                        <div>
+                            <p class="text-sm font-bold text-white">5. Vazamentos Visíveis e Mangueiras</p>
+                            <p class="text-xs text-slate-400">Verificar se há poças no solo ou vestígios de óleo, combustível ou água vazando.</p>
+                        </div>
+                        <div class="flex gap-3 w-full sm:w-auto justify-end">
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                <input type="radio" name="item5" value="OK" required class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                            </label>
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                <input type="radio" name="item5" value="Não OK" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Item 6 -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg gap-3">
+                        <div>
+                            <p class="text-sm font-bold text-white">6. Itens de Segurança e Cabine</p>
+                            <p class="text-xs text-slate-400">Checar cinto de segurança, retrovisores limpos/ajustados, limpador de para-brisa e documentos.</p>
+                        </div>
+                        <div class="flex gap-3 w-full sm:w-auto justify-end">
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                <input type="radio" name="item6" value="OK" required class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                            </label>
+                            <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                <input type="radio" name="item6" value="Não OK" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Observações -->
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Observações e Anomalias Encontradas</label>
+                <textarea id="observacoes" rows="3" placeholder="Descreva falhas, ruídos estranhos ou detalhes importantes..." class="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+            </div>
+
+            <!-- Upload de Fotos (Apenas Galeria) -->
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Anexar Fotos (Galeria)</label>
+                <input type="file" id="fotosGaleria" accept="image/*" multiple class="w-full text-sm text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-800 file:text-emerald-400 hover:file:bg-slate-700 file:cursor-pointer transition">
+                <p class="text-xs text-slate-500 mt-1">Selecione uma ou mais fotos do dispositivo para registrar avarias.</p>
+            </div>
+
+            <div id="feedbackMsg" class="hidden text-center text-sm py-2 rounded-lg"></div>
+
+            <!-- Botão Salvar -->
+            <button type="submit" class="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg hover:shadow-emerald-500/20 transition duration-200">
+                Finalizar e Enviar Checklist
+            </button>
+        </form>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        const form = document.getElementById('checklistForm');
+        const feedbackMsg = document.getElementById('feedbackMsg');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const tipoFrota = document.getElementById('tipoFrota').value;
+            const maquina = document.getElementById('maquina').value;
+            const horimetro = document.getElementById('horimetro').value;
+            const observacoes = document.getElementById('observacoes').value;
+            const fotosGaleria = document.getElementById('fotosGaleria');
+
+            const temFotos = fotosGaleria.files.length > 0;
+            const usuarioLogado = JSON.parse(localStorage.getItem('pcm_usuario')) || { nome: 'Operador Padrão' };
+
+            try {
+                feedbackMsg.textContent = 'Salvando checklist...';
+                feedbackMsg.className = 'text-amber-400 bg-amber-950/40 border border-amber-800/50 block';
+
+                const db = firebase.firestore();
+                await db.collection('checklists_maquinarios').add({
+                    tipoFrota,
+                    maquina,
+                    horimetro,
+                    observacoes,
+                    operador: usuarioLogado.nome,
+                    data: new Date().toLocaleString('pt-BR'),
+                    temFotos: temFotos
+                });
+
+                feedbackMsg.textContent = 'Checklist enviado com sucesso!';
+                feedbackMsg.className = 'text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 block';
+
+                setTimeout(() => {
+                    form.reset();
+                    feedbackMsg.classList.add('hidden');
+                }, 2500);
+
+            } catch (error) {
+                console.error('Erro ao salvar checklist:', error);
+                feedbackMsg.textContent = 'Erro ao conectar com o banco de dados.';
+                feedbackMsg.className = 'text-rose-400 bg-rose-950/40 border border-rose-800/50 block';
+            }
+        });
+    </script>
+</body>
+</html>

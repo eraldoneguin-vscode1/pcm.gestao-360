@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM-360 — Abertura de Ordem de Serviço</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background-color: #051622;
+            background-image: linear-gradient(rgba(5, 22, 34, 0.75), rgba(5, 22, 34, 0.85)), url('fundo.png');
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            color: #ffffff; min-height: 100vh; padding: 15px;
+        }
+        .container { max-width: 950px; margin: 0 auto; background: rgba(8, 30, 48, 0.9); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3); padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3a5f; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .header h2 { color: #00d4ff; font-size: 18px; }
+        .btn-voltar { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s; }
+        .btn-voltar:hover { background: #475569; }
+        .content-section { background: rgba(2, 12, 20, 0.6); padding: 15px; border-radius: 8px; border: 1px solid #1e3a5f; margin-bottom: 20px; }
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+        
+        .radio-group-container, .checkbox-group-container { background: rgba(2, 12, 20, 0.8); border: 1px solid #1e3a5f; border-radius: 6px; padding: 8px 12px; margin-top: 5px; display: flex; align-items: center; justify-content: space-between; min-height: 42px; }
+        .checkbox-group-container { flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
+        .radio-label, .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #e2e8f0; cursor: pointer; }
+        .radio-label input[type="radio"], .checkbox-label input[type="checkbox"] { accent-color: #00d4ff; width: 16px; height: 16px; cursor: pointer; margin: 0; }
+
+        .pecas-box { background: rgba(15, 23, 42, 0.7); border: 1px dashed #38bdf8; border-radius: 6px; padding: 12px; margin-top: 10px; margin-bottom: 15px; }
+        .pecas-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .btn-add-peca { background: #3b82f6; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600; }
+        .btn-add-peca:hover { background: #2563eb; }
+        .lista-pecas-container { display: flex; flex-direction: column; gap: 6px; }
+        .peca-item-row { display: grid; grid-template-columns: 3fr 1fr auto; gap: 8px; align-items: center; }
+        .btn-remover-peca { background: #ef4444; color: white; border: none; padding: 8px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+
+        input, select, textarea { width: 100%; padding: 10px; background: rgba(2, 12, 20, 0.8); border: 1px solid #1e3a5f; border-radius: 6px; color: #fff; margin-top: 5px; font-size: 14px; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 8px rgba(0, 212, 255, 0.4); }
+        select option { background: #051622; color: #fff; }
+        textarea { resize: vertical; min-height: 80px; }
+        
+        .btn-salvar { background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; }
+        .btn-salvar:hover { opacity: 0.9; }
+        
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 15px; margin-top: 15px; }
+        .os-card { background: rgba(4, 18, 30, 0.9); border: 1px solid #1e3a5f; border-left: 4px solid #38bdf8; border-radius: 6px; padding: 15px; position: relative; }
+        .os-card.concluida { border-left-color: #10b981; opacity: 0.85; }
+        
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; border-top: 1px solid #1e3a5f; padding-top: 12px; }
+        .btn-acao { padding: 8px 4px; font-size: 11px; font-weight: 600; border-radius: 4px; border: none; cursor: pointer; text-align: center; }
+        .btn-acao-status { background: #f59e0b; color: #051622; }
+        .btn-acao-status.concluir { background: #10b981; color: white; }
+        .btn-acao-chave { background: #8b5cf6; color: white; grid-column: span 2; }
+        .btn-acao-excluir { background: #ef4444; color: white; grid-column: span 2; }
+        .btn-acao:hover { opacity: 0.85; }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 12px; }
+            .form-row, .form-row-2 { grid-template-columns: 1fr; gap: 10px; }
+            .radio-group-container, .checkbox-group-container { flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px; }
+            .peca-item-row { grid-template-columns: 2fr 1fr auto; }
+            .cards-grid { grid-template-columns: 1fr; }
+            .header h2 { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h2>PCM-360 — Abertura de Ordem de Serviço <span style="background:#38bdf8; color:#051622; padding:2px 6px; border-radius:4px; font-size:11px;">MÓDULO</span></h2>
+            <button id="btn-voltar" class="btn-voltar" type="button" onclick="window.location.href='0painel-master.html'">⬅ Voltar ao Painel</button>
+        </div>
+
+        <div class="content-section">
+            <h3 style="color: #00d4ff; margin-bottom: 15px; font-size: 16px;">Nova Ordem de Serviço (OS)</h3>
+            
+            <div class="form-row">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Empresa Vinculada</label>
+                    <input type="text" id="os-empresa" readonly style="background: rgba(2, 12, 20, 0.4); color: #38bdf8; font-weight: 600; cursor: not-allowed;" value="Carregando empresa...">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Funcionário Solicitante</label>
+                    <input type="text" id="os-funcionario" readonly style="background: rgba(2, 12, 20, 0.4); color: #38bdf8; font-weight: 600; cursor: not-allowed;" value="Carregando usuário...">
+                </div>
+            </div>
+
+            <div class="form-row-3">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Setor(es) Responsável(is)</label>
+                    <div class="checkbox-group-container">
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Almoxarifado"> Almoxarifado</label>
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Construção"> Construção</label>
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Elétrica"> Elétrica</label>
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Hidráulica"> Hidráulica</label>
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Mecânica"> Mecânica</label>
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Recursos Humanos"> Recursos Humanos</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row-2">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Prioridade</label>
+                    <div class="radio-group-container">
+                        <label class="radio-label"><input type="radio" name="os-prioridade" value="Baixa" checked> Baixa</label>
+                        <label class="radio-label"><input type="radio" name="os-prioridade" value="Média"> Média</label>
+                        <label class="radio-label"><input type="radio" name="os-prioridade" value="Alta"> Alta</label>
+                        <label class="radio-label"><input type="radio" name="os-prioridade" value="Urgente"> Urgente</label>
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Equipamento / Máquina / Ativo</label>
+                    <input type="text" id="os-equipamento" placeholder="Ex: Trator John Deere 7230 / Bomba Irrigação 02" style="margin-top: 5px;">
+                </div>
+            </div>
+
+            <div class="form-row-3">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Descrição do Serviço / Falha Relatada</label>
+                    <textarea id="os-descricao" placeholder="Descreva detalhadamente o problema ou serviço a ser executado..."></textarea>
+                </div>
+            </div>
+
+            <div class="pecas-box">
+                <div class="pecas-header">
+                    <span style="font-size: 13px; color: #38bdf8; font-weight: 600;">📦 Solicitação de Peças / Insumos (Opcional)</span>
+                    <button type="button" class="btn-add-peca" id="btn-adicionar-linha-peca">➕ Adicionar Peça</button>
+                </div>
+                <div id="container-linhas-pecas" class="lista-pecas-container"></div>
+            </div>
+            
+            <button id="btn-salvar-os" class="btn-salvar" type="button">Abrir Ordem de Serviço</button>
+
+            <div style="margin-top: 25px; border-top: 1px solid #1e3a5f; padding-top: 20px;">
+                <h4 style="color: #00d4ff; margin-bottom: 15px; font-size: 15px;">Ordens de Serviço da Empresa</h4>
+                <div id="lista-os-cards" class="cards-grid">
+                    <p style="color: #64748b; font-size: 13px;">Carregando ordens de serviço...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ INSIRA AQUI A SUA URL DO GOOGLE APPS SCRIPT ATUALIZADA
+        const URL_API = "SUA_URL_DO_APPS_SCRIPT_AQUI";
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btn-salvar-os').addEventListener('click', salvarOS);
+            document.getElementById('btn-adicionar-linha-peca').addEventListener('click', () => adicionarLinhaPeca());
+            
+            carregarDadosSessao();
+        });
+
+        function carregarDadosSessao() {
+            // Pega o nome do funcionário logado
+            const nomeFuncionario = sessionStorage.getItem('usuarioNome') || localStorage.getItem('usuarioNome') || 'Mecânico / Operador';
+            document.getElementById('os-funcionario').value = nomeFuncionario;
+
+            // Pega a empresa vinculada ao usuário logado (salva no login)
+            const nomeEmpresa = sessionStorage.getItem('empresaNome') || localStorage.getItem('empresaNome') || 'Minha Empresa';
+            document.getElementById('os-empresa').value = nomeEmpresa;
+
+            // Carrega apenas as OSs desta empresa
+            carregarOS(nomeEmpresa);
+        }
+
+        function adicionarLinhaPeca(nomePeca = '', qtd = '1') {
+            const container = document.getElementById('container-linhas-pecas');
+            const row = document.createElement('div');
+            row.className = 'peca-item-row';
+            row.innerHTML = `
+                <input type="text" class="input-nome-peca" placeholder="Nome da peça ou código" value="${nomePeca}">
+                <input type="number" class="input-qtd-peca" placeholder="Qtd" min="1" value="${qtd}">
+                <button type="button" class="btn-remover-peca" onclick="this.parentElement.remove()">🗑️</button>
+            `;
+            container.appendChild(row);
+        }
+
+        async function carregarOS(empresaFiltro) {
+            const container = document.getElementById('lista-os-cards');
+            container.innerHTML = '<p style="color: #64748b; font-size: 13px;">Carregando...</p>';
+
+            try {
+                const response = await fetch(URL_API, {
+                    method: 'POST',
+                    body: JSON.stringify({ acao: 'listarOS' })
+                });
+                const resultado = await response.json();
+                
+                container.innerHTML = '';
+                
+                if (!resultado.sucesso || !resultado.ordens || resultado.ordens.length === 0) {
+                    container.innerHTML = '<p style="color: #64748b; font-size: 13px;">Nenhuma OS cadastrada para esta empresa.</p>';
+                    return;
+                }
+                
+                // Filtra apenas as ordens da empresa logada
+                const ordensFiltradas = resultado.ordens.filter(os => os.empresa === empresaFiltro);
+
+                if (ordensFiltradas.length === 0) {
+                    container.innerHTML = '<p style="color: #64748b; font-size: 13px;">Nenhuma OS cadastrada para esta empresa.</p>';
+                    return;
+                }
+
+                ordensFiltradas.forEach((os) => {
+                    const concluida = os.status === 'Concluída';
+
+                    let htmlPecas = '';
+                    if (os.pecas && os.pecas.trim() !== '') {
+                        htmlPecas = `<div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="font-size:11px; color:#38bdf8;">Peças Solicitadas:</strong>
+                                <span style="font-size:11px; font-weight:600; color:${os.numeroChave ? '#10b981' : '#f59e0b'};">
+                                    🔑 Chave: ${os.numeroChave || 'Aguardando liberação'}
+                                </span>
+                            </div>
+                            <p style="font-size: 11px; color: #cbd5e1; margin-top: 4px; white-space: pre-line;">${os.pecas}</p>
+                        </div>`;
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = `os-card ${concluida ? 'concluida' : ''}`;
+                    
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <h5 style="color: #fff; font-size: 15px; margin-bottom: 4px;">OS #${String(os.id).slice(-6)}</h5>
+                            <span style="font-size:10px; padding:2px 6px; border-radius:3px; background:${concluida ? '#10b981' : '#f59e0b'}; color:#fff;">
+                                ${os.status || 'Aberta'}
+                            </span>
+                        </div>
+                        <p style="color: #94a3b8; font-size: 12px; margin-top: 4px;"><strong>Equipamento:</strong> ${os.equipamento}</p>
+                        <p style="color: #94a3b8; font-size: 12px;"><strong>Setores:</strong> ${os.setores}</p>
+                        <p style="color: #94a3b8; font-size: 12px;"><strong>Solicitante:</strong> ${os.funcionario}</p>
+                        <p style="color: #94a3b8; font-size: 12px;"><strong>Prioridade:</strong> <span style="color:#38bdf8;">${os.prioridade}</span></p>
+                        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 6px;"><strong>Descrição:</strong> ${os.descricao}</p>
+                        ${htmlPecas}
+
+                        <div class="card-actions">
+                            <button class="btn-acao btn-acao-status ${concluida ? '' : 'concluir'}" type="button" onclick="alternarStatusOS('${os.id}', '${os.status}')">
+                                ${concluida ? '↩️ Reabrir' : '✔️ Concluir'}
+                            </button>
+                            ${os.pecas && os.pecas.trim() !== '' ? `<button class="btn-acao btn-acao-chave" type="button" onclick="informarChave('${os.id}', '${os.numeroChave || ''}')">🔑 Informar/Editar Chave</button>` : ''}
+                            <button class="btn-acao btn-acao-excluir" type="button" onclick="excluirOS('${os.id}')">🗑️ Excluir OS</button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (erro) {
+                console.error("Erro ao carregar OS:", erro);
+                container.innerHTML = '<p style="color: #ef4444; font-size: 13px;">Erro ao carregar da planilha.</p>';
+            }
+        }
+
+        window.informarChave = async function(id, chaveAtual) {
+            const novaChave = prompt(`Digite o Número da Chave para retirada da peça no almoxarifado:`, chaveAtual);
+            if (novaChave === null) return;
+
+            try {
+                await fetch(URL_API, {
+                    method: 'POST',
+                    body: JSON.stringify({ acao: 'atualizarChaveOS', id: id, numeroChave: novaChave.trim() })
+                });
+                alert('Número da chave atualizado!');
+                carregarDadosSessao();
+            } catch (erro) {
+                alert('Erro ao atualizar chave.');
+            }
+        };
+
+        window.alternarStatusOS = async function(id, statusAtual) {
+            const novoStatus = statusAtual === 'Concluída' ? 'Aberta' : 'Concluída';
+            try {
+                await fetch(URL_API, {
+                    method: 'POST',
+                    body: JSON.stringify({ acao: 'atualizarStatusOS', id: id, status: novoStatus })
+                });
+                carregarDadosSessao();
+            } catch (erro) {
+                alert('Erro ao alterar status.');
+            }
+        };
+
+        window.excluirOS = async function(id) {
+            if (!confirm(`Deseja realmente excluir esta Ordem de Serviço?`)) return;
+
+            try {
+                await fetch(URL_API, {
+                    method: 'POST',
+                    body: JSON.stringify({ acao: 'excluirOS', id: id })
+                });
+                alert('OS excluída com sucesso.');
+                carregarDadosSessao();
+            } catch (erro) {
+                alert('Erro ao excluir OS.');
+            }
+        };
+
+        async function salvarOS() {
+            const empresa = document.getElementById('os-empresa').value;
+            const funcionario = document.getElementById('os-funcionario').value;
+            
+            const setores = [];
+            document.querySelectorAll('input[name="os-setor"]:checked').forEach(cb => {
+                setores.push(cb.value);
+            });
+
+            const prioridadeSelecionada = document.querySelector('input[name="os-prioridade"]:checked');
+            const prioridade = prioridadeSelecionada ? prioridadeSelecionada.value : 'Média';
+
+            const equipamento = document.getElementById('os-equipamento').value.trim();
+            const descricao = document.getElementById('os-descricao').value.trim();
+            
+            if(!empresa || setores.length === 0 || !equipamento || !descricao) {
+                alert('Preencha os campos obrigatórios (Setor(es), Equipamento e Descrição)!');
+                return;
+            }
+
+            let listaPecasStr = '';
+            document.querySelectorAll('.peca-item-row').forEach(linha => {
+                const nome = linha.querySelector('.input-nome-peca').value.trim();
+                const quantidade = linha.querySelector('.input-qtd-peca').value;
+                if (nome !== '') {
+                    listaPecasStr += `${quantidade}x - ${nome}\n`;
+                }
+            });
+
+            const dadosOS = {
+                acao: 'cadastrarOS',
+                empresa: empresa,
+                setores: setores.join(', '),
+                prioridade: prioridade,
+                equipamento: equipamento,
+                funcionario: funcionario,
+                descricao: descricao,
+                pecas: listaPecasStr.trim()
+            };
+
+            try {
+                const response = await fetch(URL_API, {
+                    method: 'POST',
+                    body: JSON.stringify(dadosOS)
+                });
+                const resultado = await response.json();
+
+                if (resultado.sucesso) {
+                    alert('Ordem de Serviço aberta com sucesso!');
+                    
+                    document.getElementById('os-equipamento').value = '';
+                    document.getElementById('os-descricao').value = '';
+                    document.querySelectorAll('input[name="os-setor"]').forEach(cb => cb.checked = false);
+                    document.getElementById('container-linhas-pecas').innerHTML = '';
+                    document.querySelector('input[name="os-prioridade"][value="Média"]').checked = true;
+                    
+                    carregarDadosSessao();
+                } else {
+                    alert('Erro: ' + resultado.erro);
+                }
+            } catch (erro) {
+                console.error("Erro ao salvar OS:", erro);
+                alert('Erro ao conectar com a planilha.');
+            }
+        }
+    </script>
+</body>
+</html>

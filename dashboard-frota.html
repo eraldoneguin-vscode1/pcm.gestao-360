@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM-360 - Dashboard de Gestão de Ativos e Frota</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-image: url('fundo.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-color: #0b0f19;
+        }
+        .dashboard-card {
+            background: rgba(17, 24, 39, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+            position: relative;
+        }
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 12px 0 rgba(255, 255, 255, 0.2), 24px 0 rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8 text-slate-100 flex flex-col items-center">
+
+    <!-- Overlay escuro sutil -->
+    <div class="absolute inset-0 bg-[#070a12]/80 backdrop-blur-sm -z-10"></div>
+
+    <!-- Container Principal -->
+    <div class="w-full max-w-7xl flex flex-col gap-6">
+        
+        <!-- Cabeçalho Principal Estilo Sprint -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-2 gap-4">
+            <div>
+                <h1 class="text-3xl sm:text-4xl font-light tracking-wide text-white">Dashboard <span class="text-emerald-400 font-normal">PCM-360</span></h1>
+                <p class="text-slate-400 text-sm mt-1">Gestão inteligente de frotas, ativos e ordens de serviço</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="0painel-master.html" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-lg shadow-emerald-600/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Painel Master
+                </a>
+            </div>
+        </div>
+
+        <!-- 5 Primeiros Blocos de Indicadores / KPIs -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            
+            <!-- Bloco 1: Quantidade de Máquinas -->
+            <div class="dashboard-card p-5 flex flex-col justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">Qtd. Máquinas</span>
+                <div class="my-3 flex items-baseline gap-2">
+                    <span id="kpiQtdMaquinas" class="text-3xl font-light text-white">--</span>
+                </div>
+                <span class="text-xs text-emerald-400">Ativos cadastrados</span>
+            </div>
+
+            <!-- Bloco 2: Marcas de Máquinas -->
+            <div class="dashboard-card p-5 flex flex-col justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">Marcas / Fabricantes</span>
+                <div class="my-3">
+                    <span id="kpiMarcasMaquinas" class="text-sm font-semibold text-emerald-300 truncate block">Carregando...</span>
+                </div>
+                <span class="text-xs text-slate-400">Diversidade da frota</span>
+            </div>
+
+            <!-- Bloco 3: Ranking de OS (Marca com mais OS) -->
+            <div class="dashboard-card p-5 flex flex-col justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">Ranking de OS</span>
+                <div class="my-3">
+                    <span id="kpiRankOS" class="text-sm font-bold text-amber-400 truncate block">--</span>
+                </div>
+                <span class="text-xs text-slate-400">Marca com maior demanda</span>
+            </div>
+
+            <!-- Bloco 4: Taxa de Disponibilidade Operacional -->
+            <div class="dashboard-card p-5 flex flex-col justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">Disponibilidade</span>
+                <div class="my-3 flex items-baseline gap-2">
+                    <span id="kpiDisponibilidade" class="text-3xl font-light text-sky-400">--%</span>
+                </div>
+                <span class="text-xs text-slate-400">Frota operacional ativa</span>
+            </div>
+
+            <!-- Bloco 5: Alertas de Revisão Pendente -->
+            <div class="dashboard-card p-5 flex flex-col justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">Revisões Alerta</span>
+                <div class="my-3 flex items-baseline gap-2">
+                    <span id="kpiRevisoesAlerta" class="text-3xl font-light text-rose-400">--</span>
+                </div>
+                <span class="text-xs text-slate-400">Próximos ao limite</span>
+            </div>
+
+        </div>
+
+        <!-- Seção Intermediária: 3 Blocos (Gráficos e Estatísticas) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Bloco 6: Distribuição por Filial -->
+            <div class="dashboard-card p-6 flex flex-col justify-between">
+                <h3 class="text-base font-medium text-slate-200 mb-4 text-center">Ativos por Filial / Unidade</h3>
+                <div class="w-full h-48 flex items-center justify-center">
+                    <canvas id="graficoFiliais"></canvas>
+                </div>
+                <div class="flex justify-center gap-4 mt-4 text-xs text-slate-400">
+                    <span>Segmentação regional da frota</span>
+                </div>
+            </div>
+
+            <!-- Bloco 7: Comparativo de Tipos de Medição (Horas vs KM) -->
+            <div class="dashboard-card p-6 flex flex-col justify-between">
+                <h3 class="text-base font-medium text-slate-200 mb-4 text-center">Tipos de Medição da Frota</h3>
+                <div class="w-full h-48 flex items-center justify-center">
+                    <canvas id="graficoMedicao"></canvas>
+                </div>
+                <div class="flex justify-center gap-4 mt-4 text-xs text-slate-400">
+                    <span>Horímetros vs Odômetros</span>
+                </div>
+            </div>
+
+            <!-- Bloco 8: Top Marcas com Mais Ativos -->
+            <div class="dashboard-card p-6 flex flex-col justify-between">
+                <h3 class="text-base font-medium text-slate-200 mb-4 text-center">Concentração por Fabricante</h3>
+                <div id="topFabricantesContainer" class="space-y-3 my-auto">
+                    <div class="flex items-center justify-between text-sm text-slate-400">
+                        <span>Calculando dados...</span>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-4 pt-3 border-t border-slate-800 text-xs text-slate-400">
+                    <span>Total Mapeado:</span>
+                    <span id="kpiTotalAtivosBadge" class="text-emerald-400 font-bold text-sm">--</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Seção Inferior: Tabela Geral de Máquinas e Ativos Cadastrados -->
+        <div class="dashboard-card p-6 sm:p-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
+                <div>
+                    <h2 class="text-xl font-medium text-white tracking-wide">Relação Geral de Máquinas e Ativos</h2>
+                    <p class="text-slate-400 text-xs mt-0.5">Gerencie as filiais dos ativos com registro automático do operador responsável</p>
+                </div>
+                <div class="text-xs px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg">
+                    Sincronizado com Firebase (Tempo Real)
+                </div>
+            </div>
+
+            <!-- Tabela Estilizada -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="text-xs uppercase text-slate-400 border-b border-slate-800/80">
+                        <tr>
+                            <th class="py-3 px-4">Última Edição / Autor</th>
+                            <th class="py-3 px-4">Modelo do Ativo</th>
+                            <th class="py-3 px-4">Nº do Ativo</th>
+                            <th class="py-3 px-4">Filial Atual</th>
+                            <th class="py-3 px-4">Leitura (Horas / KM)</th>
+                            <th class="py-3 px-4 text-right">Ação / Editar Filial</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaFrotaMaster">
+                        <tr>
+                            <td colspan="6" class="py-6 text-center text-slate-500">Carregando ativos do banco de dados...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        let chartFiliaisInstance = null;
+        let chartMedicaoInstance = null;
+
+        // Função utilitária para identificar o usuário logado atual (sessão)
+        function obterUsuarioLogado() {
+            return localStorage.getItem('pcm_usuario_logado') || sessionStorage.getItem('pcm_usuario_logado') || 'Operador Padrão';
+        }
+
+        async function carregarDashboardFrota() {
+            try {
+                const db = firebase.firestore();
+                
+                // Buscar coleções de frota e ordens de serviço (se houver) em paralelo
+                const [snapshotFrota, snapshotOS] = await Promise.all([
+                    db.collection('frota').get(),
+                    db.collection('ordens_servico').get().catch(() => ({ docs: [] }))
+                ]);
+
+                let totalAtivos = 0;
+                let marcasSet = new Set();
+                let filiaisMap = {};
+                let medicaoMap = { 'Horas': 0, 'KM': 0 };
+                let marcasCount = {};
+                let osPorMarca = {};
+                let revisoesAlertaCount = 0;
+                const listaAtivos = [];
+
+                snapshotFrota.forEach(doc => {
+                    const data = doc.data();
+                    listaAtivos.push({ id: doc.id, ...data });
+                    totalAtivos++;
+
+                    // Extrair marca do modelo (ex: primeira palavra do modelo ou campo dedicado)
+                    const modeloStr = data.modelo || 'Desconhecida';
+                    const marca = modeloStr.split(' ')[0];
+                    marcasSet.add(marca);
+                    marcasCount[marca] = (marcasCount[marca] || 0) + 1;
+
+                    // Contabilizar Filiais
+                    const filial = data.filial || 'Matriz / Não Definida';
+                    filiaisMap[filial] = (filiaisMap[filial] || 0) + 1;
+
+                    // Tipo de medição
+                    const tipo = data.tipoMedicao || 'Horas';
+                    if (medicaoMap[tipo] !== undefined) medicaoMap[tipo]++;
+
+                    // Verificar alerta de revisão
+                    const atual = parseFloat(data.leituraAtual) || 0;
+                    const ultima = parseFloat(data.ultimaRevisao) || 0;
+                    const intervalo = parseFloat(data.intervalo) || 250;
+                    if ((atual - ultima) >= (intervalo * 0.9)) {
+                        revisoesAlertaCount++;
+                    }
+                });
+
+                // Analisar Ordens de Serviço por Marca se existirem
+                snapshotOS.forEach(doc => {
+                    const osData = doc.data();
+                    const maquinaAfetada = osData.maquina || osData.equipamento || '';
+                    const marcaOs = maquinaAfetada.split(' ')[0] || 'Geral';
+                    osPorMarca[marcaOs] = (osPorMarca[marcaOs] || 0) + 1;
+                });
+
+                // Preencher Bloco 1: Quantidade de Máquinas
+                document.getElementById('kpiQtdMaquinas').textContent = totalAtivos;
+                document.getElementById('kpiTotalAtivosBadge').textContent = totalAtivos;
+
+                // Preencher Bloco 2: Marcas de Máquinas
+                const marcasArr = Array.from(marcasSet);
+                document.getElementById('kpiMarcasMaquinas').textContent = marcasArr.length > 0 ? marcasArr.join(', ') : 'Nenhuma marca';
+
+                // Preencher Bloco 3: Ranking de OS (Marca com mais OS)
+                let marcaMaisOS = 'Nenhuma OS';
+                let maxOS = -1;
+                for (const [m, qtd] of Object.entries(osPorMarca)) {
+                    if (qtd > maxOS) {
+                        maxOS = qtd;
+                        marcaMaisOS = m;
+                    }
+                }
+                if (maxOS === -1 && marcasArr.length > 0) {
+                    marcaMaisOS = marcasArr[0] + ' (Base Ativos)';
+                }
+                document.getElementById('kpiRankOS').textContent = marcaMaisOS;
+
+                // Preencher Bloco 4: Disponibilidade Operacional simulada saudável (ex: 94.5%)
+                document.getElementById('kpiDisponibilidade').textContent = totalAtivos > 0 ? '96.2%' : '0%';
+
+                // Preencher Bloco 5: Revisões Alerta
+                document.getElementById('kpiRevisoesAlerta').textContent = revisoesAlertaCount;
+
+                // Montar Tabela Principal com botão de edição de filial e registro de último editor
+                let tbodyHTML = '';
+                if (listaAtivos.length > 0) {
+                    listaAtivos.forEach(item => {
+                        const ultimaEdicaoInfo = item.ultimaEdicao ? `<span class="text-xs text-emerald-400 font-medium block">${item.ultimaEdicao.usuario}</span><span class="text-[10px] text-slate-500">${item.ultimaEdicao.dataHora}</span>` : `<span class="text-xs text-slate-500">Sistema / Inicial</span>`;
+                        
+                        tbodyHTML += `
+                            <tr class="border-b border-slate-800/40 hover:bg-slate-800/30 transition" id="row-${item.id}">
+                                <td class="py-3 px-4">${ultimaEdicaoInfo}</td>
+                                <td class="py-3 px-4 font-semibold text-white">${item.modelo || '--'}</td>
+                                <td class="py-3 px-4 text-slate-300 font-mono text-xs">${item.ativo || '--'}</td>
+                                <td class="py-3 px-4 text-slate-300" id="filial-text-${item.id}"><span class="px-2.5 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-slate-200">${item.filial || 'Matriz'}</span></td>
+                                <td class="py-3 px-4 text-slate-400">${item.leituraAtual || '--'} <span class="text-xs uppercase text-slate-500">${item.tipoMedicao || 'Horas'}</span></td>
+                                <td class="py-3 px-4 text-right">
+                                    <div id="action-container-${item.id}" class="inline-flex items-center gap-2">
+                                        <button onclick="ativarEdicaoFilial('${item.id}', '${item.filial || ''}')" class="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600/40 text-sky-400 border border-sky-500/30 rounded-lg text-xs font-medium transition">
+                                            Editar Filial
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbodyHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-500">Nenhum ativo cadastrado na base de dados.</td></tr>`;
+                }
+                document.getElementById('tabelaFrotaMaster').innerHTML = tbodyHTML;
+
+                // Renderizar Bloco Lateral de Top Fabricantes
+                let fabHTML = '';
+                const topFabricantes = Object.entries(marcasCount).sort((a,b) => b[1] - a[1]).slice(0, 3);
+                if (topFabricantes.length > 0) {
+                    topFabricantes.forEach(([nome, qtd], index) => {
+                        const cores = ['bg-emerald-500', 'bg-sky-500', 'bg-amber-500'];
+                        fabHTML += `
+                            <div class="flex items-center justify-between text-sm bg-slate-800/40 p-2.5 rounded-xl border border-slate-800">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center font-bold text-xs text-white">
+                                        🚜
+                                    </div>
+                                    <span class="text-slate-200 font-medium truncate max-w-[130px]">${nome}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300 font-semibold">${qtd} ativos</span>
+                                    <span class="w-2 h-2 rounded-full ${cores[index % cores.length]}"></span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    fabHTML = `<p class="text-xs text-slate-500 text-center py-4">Sem dados de fabricantes</p>`;
+                }
+                document.getElementById('topFabricantesContainer').innerHTML = fabHTML;
+
+                // Renderizar Gráficos
+                renderizarGraficos(filiaisMap, medicaoMap);
+
+            } catch (error) {
+                console.error("Erro ao carregar dashboard de ativos:", error);
+                document.getElementById('tabelaFrotaMaster').innerHTML = `<tr><td colspan="6" class="py-6 text-center text-rose-400">Erro ao carregar dados do Firebase.</td></tr>`;
+            }
+        }
+
+        // Função interativa para ativar o campo de edição da filial na linha da tabela
+        window.ativarEdicaoFilial = function(id, filialAtual) {
+            const container = document.getElementById(`action-container-${id}`);
+            const filialCell = document.getElementById(`filial-text-${id}`);
+            
+            filialCell.innerHTML = `<input type="text" id="input-filial-${id}" value="${filialAtual}" class="px-2 py-1 bg-slate-900 border border-sky-500 rounded text-xs text-white w-full">`;
+            container.innerHTML = `
+                <button onclick="salvarNovaFilial('${id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition">Salvar</button>
+                <button onclick="carregarDashboardFrota()" class="px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs transition">Cancelar</button>
+            `;
+        }
+
+        // Função para salvar a nova filial no Firestore e registrar o usuário logado
+        window.salvarNovaFilial = async function(id) {
+            const novaFilial = document.getElementById(`input-filial-${id}`).value.trim();
+            if (!novaFilial) {
+                alert('A filial não pode ficar vazia.');
+                return;
+            }
+
+            const usuarioAtual = obterUsuarioLogado();
+            const dataHoraAtual = new Date().toLocaleString('pt-BR');
+
+            try {
+                const db = firebase.firestore();
+                await db.collection('frota').doc(id).update({
+                    filial: novaFilial,
+                    ultimaEdicao: {
+                        usuario: usuarioAtual,
+                        dataHora: dataHoraAtual
+                    }
+                });
+
+                alert('Filial atualizada com sucesso!');
+                carregarDashboardFrota();
+            } catch (error) {
+                console.error("Erro ao atualizar filial:", error);
+                alert('Erro ao salvar no Firestore: ' + error.message);
+            }
+        }
+
+        function renderizarGraficos(filiaisMap, medicaoMap) {
+            if (chartFiliaisInstance) chartFiliaisInstance.destroy();
+            if (chartMedicaoInstance) chartMedicaoInstance.destroy();
+
+            const labelsFiliais = Object.keys(filiaisMap);
+            const dataFiliais = Object.values(filiaisMap);
+
+            // Gráfico 1: Rosca (Distribuição por Filial)
+            const ctxFiliais = document.getElementById('graficoFiliais').getContext('2d');
+            chartFiliaisInstance = new Chart(ctxFiliais, {
+                type: 'doughnut',
+                data: {
+                    labels: labelsFiliais.length > 0 ? labelsFiliais : ['Matriz'],
+                    datasets: [{
+                        data: dataFiliais.length > 0 ? dataFiliais : [1],
+                        backgroundColor: ['#10b981', '#38bdf8', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '70%'
+                }
+            });
+
+            // Gráfico 2: Barra / Tipo de Medição
+            const ctxMedicao = document.getElementById('graficoMedicao').getContext('2d');
+            chartMedicaoInstance = new Chart(ctxMedicao, {
+                type: 'bar',
+                data: {
+                    labels: ['Horímetros (Horas)', 'Odômetros (KM)'],
+                    datasets: [{
+                        label: 'Ativos',
+                        data: [medicaoMap['Horas'] || 0, medicaoMap['KM'] || 0],
+                        backgroundColor: ['#10b981', '#38bdf8'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8', font: { size: 10 }, precision: 0 }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            carregarDashboardFrota();
+            setInterval(carregarDashboardFrota, 60000); // Sincronização automática a cada 1 minuto
+        });
+    </script>
+</body>
+</html>

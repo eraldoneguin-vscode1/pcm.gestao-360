@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM-360 - Gestão de Almoxarifado e Pedidos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-image: url('fundo.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-color: #0b0f19;
+        }
+        .dashboard-card {
+            background: rgba(17, 24, 39, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+            position: relative;
+        }
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 12px 0 rgba(255, 255, 255, 0.2), 24px 0 rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8 text-slate-100 flex flex-col items-center">
+
+    <!-- Overlay escuro sutil -->
+    <div class="absolute inset-0 bg-[#070a12]/80 backdrop-blur-sm -z-10"></div>
+
+    <!-- Container Principal -->
+    <div class="w-full max-w-7xl flex flex-col gap-6">
+        
+        <!-- Cabeçalho Principal -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-2 gap-4">
+            <div>
+                <h1 class="text-3xl sm:text-4xl font-light tracking-wide text-white">Central do <span class="text-emerald-400 font-normal">Almoxarifado</span></h1>
+                <p class="text-slate-400 text-sm mt-1">Gerenciamento de solicitações de materiais separados por setores</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="carregarPedidosAlmoxarifado()" class="px-4 py-2 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-slate-200 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Atualizar Pedidos
+                </button>
+                <a href="1painel-master.html" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-lg shadow-emerald-600/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Painel Master
+                </a>
+            </div>
+        </div>
+
+        <!-- Seção Superior: Filtro por Setores -->
+        <div class="flex flex-wrap gap-2 items-center">
+            <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold mr-2">Filtrar Setor:</span>
+            <button onclick="filtrarSetor('todos')" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-600 text-white transition shadow">Todos</button>
+            <button onclick="filtrarSetor('Manutenção')" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">Manutenção</button>
+            <button onclick="filtrarSetor('Operação Agrícola')" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">Operação Agrícola</button>
+            <button onclick="filtrarSetor('Oficina Mecânica')" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">Oficina Mecânica</button>
+            <button onclick="filtrarSetor('Irrigação')" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">Irrigação</button>
+        </div>
+
+        <!-- Seção Principal: Lista de Pedidos Divididos em Blocos por Setor / Solicitação -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="blocosPedidosContainer">
+            <!-- Os blocos serão injetados dinamicamente via script -->
+            <div class="dashboard-card p-6 text-center text-slate-500 col-span-full py-12">
+                Carregando solicitações de materiais...
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        let todosPedidos = [];
+        let setorAtivo = 'todos';
+
+        async function carregarPedidosAlmoxarifado() {
+            try {
+                const db = firebase.firestore();
+                // Busca na coleção de pedidos/requisições do almoxarifado
+                const snapshot = await db.collection('pedidos_almoxarifado').orderBy('data', 'desc').get();
+
+                todosPedidos = [];
+                snapshot.forEach(doc => {
+                    todosPedidos.push({ id: doc.id, ...doc.data() });
+                });
+
+                renderizarBlocos();
+            } catch (error) {
+                console.error("Erro ao carregar pedidos:", error);
+                document.getElementById('blocosPedidosContainer').innerHTML = `
+                    <div class="dashboard-card p-6 text-center text-rose-400 col-span-full py-12">
+                        Erro ao conectar com o banco de dados ou coleção 'pedidos_almoxarifado' não encontrada.
+                    </div>
+                `;
+            }
+        }
+
+        function filtrarSetor(setor) {
+            setorAtivo = setor;
+            
+            // Atualizar classes visuais dos botões de filtro
+            const botoes = document.querySelectorAll('.flex.flex-wrap.gap-2 button');
+            botoes.forEach(btn => {
+                if(btn.textContent.includes(setor) || (setor === 'todos' && btn.textContent === 'Todos')) {
+                    btn.className = "px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-600 text-white transition shadow";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition";
+                }
+            });
+
+            renderizarBlocos();
+        }
+
+        function renderizarBlocos() {
+            const container = document.getElementById('blocosPedidosContainer');
+            
+            const pedidosFiltrados = setorAtivo === 'todos' 
+                ? todosPedidos 
+                : todosPedidos.filter(p => (p.setor || '').toLowerCase() === setorAtivo.toLowerCase());
+
+            if (pedidosFiltrados.length === 0) {
+                container.innerHTML = `
+                    <div class="dashboard-card p-6 text-center text-slate-500 col-span-full py-12">
+                        Nenhum pedido pendente ou encontrado para este setor no momento.
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            pedidosFiltrados.forEach(pedido => {
+                const statusSeparado = pedido.status === 'Separado';
+                const badgeStatus = statusSeparado 
+                    ? `<span class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md text-xs font-semibold">Separado ✓</span>`
+                    : `<span class="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-md text-xs font-semibold animate-pulse">Pendente</span>`;
+
+                const botaoAcao = statusSeparado
+                    ? `<button disabled class="w-full py-2 bg-slate-800 text-slate-500 rounded-xl text-xs font-medium cursor-not-allowed">Pedido Já Separado</button>`
+                    : `<button onclick="marcarComoSeparado('${pedido.id}')" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition shadow-lg shadow-emerald-600/20">Marcar como Separado</button>`;
+
+                html += `
+                    <div class="dashboard-card p-6 flex flex-col justify-between gap-4">
+                        <div>
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <span class="text-xs text-emerald-400 font-semibold tracking-wide uppercase">${pedido.setor || 'Setor Geral'}</span>
+                                    <h3 class="text-lg font-medium text-white mt-0.5">Chave / Lote #${pedido.numeroChave || pedido.chave || '00'}</h3>
+                                </div>
+                                ${badgeStatus}
+                            </div>
+                            <div class="space-y-1.5 text-xs text-slate-300 border-t border-slate-800/80 pt-3">
+                                <p><span class="text-slate-400">Solicitante:</span> <span class="text-white font-medium">${pedido.solicitante || pedido.operador || 'Não informado'}</span></p>
+                                <p><span class="text-slate-400">Materiais / Itens:</span> <span class="text-slate-200">${pedido.materiais || pedido.descricao || 'Solicitação geral de almoxarifado'}</span></p>
+                                <p><span class="text-slate-400">Data/Hora:</span> ${pedido.data || 'Recente'}</p>
+                            </div>
+                        </div>
+                        <div class="pt-2">
+                            ${botaoAcao}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function marcarComoSeparado(idDoc) {
+            try {
+                const db = firebase.firestore();
+                await db.collection('pedidos_almoxarifado').doc(idDoc).update({
+                    status: 'Separado',
+                    dataSeparacao: new Date().toISOString()
+                });
+
+                // Atualizar localmente e re-renderizar
+                const p = todosPedidos.find(item => item.id === idDoc);
+                if (p) p.status = 'Separado';
+                renderizarBlocos();
+
+            } catch (error) {
+                console.error("Erro ao atualizar status do pedido:", error);
+                alert("Erro ao atualizar o pedido no banco de dados.");
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            carregarPedidosAlmoxarifado();
+            // Atualiza a cada 30 segundos para receber novas notificações de pedidos dos setores
+            setInterval(carregarPedidosAlmoxarifado, 30000);
+        });
+    </script>
+</body>
+</html>
