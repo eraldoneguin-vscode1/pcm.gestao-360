@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM360 — Cadastro de Setores</title>
+    <!-- SDK do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background-color: #051622;
+            background-image: linear-gradient(rgba(5, 22, 34, 0.75), rgba(5, 22, 34, 0.85)), url('fundo.png');
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            color: #ffffff; min-height: 100vh; padding: 15px;
+        }
+        .container { max-width: 900px; margin: 0 auto; background: rgba(8, 30, 48, 0.9); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3); padding: 25px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3a5f; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .header h2 { color: #00d4ff; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        .btn-voltar { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s; }
+        .btn-voltar:hover { background: #475569; }
+        .content-section { background: rgba(2, 12, 20, 0.6); padding: 20px; border-radius: 8px; border: 1px solid #1e3a5f; margin-bottom: 20px; }
+        
+        .form-row { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 15px; }
+        
+        label { font-size: 12px; color: #cbd5e1; font-weight: 500; display: block; margin-bottom: 5px; }
+        input { 
+            width: 100%; padding: 10px; background: rgba(2, 12, 20, 0.8); 
+            border: 1px solid #1e3a5f; border-radius: 6px; color: #fff; font-size: 14px; text-transform: uppercase; 
+        }
+        input:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 8px rgba(0, 212, 255, 0.4); }
+        
+        .btn-salvar { background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; margin-top: 5px; transition: opacity 0.2s; }
+        .btn-salvar:hover { opacity: 0.9; }
+        .btn-salvar:disabled { background: #64748b; cursor: not-allowed; }
+
+        .setores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; margin-top: 15px; }
+        .setor-card { background: rgba(4, 18, 30, 0.9); border: 1px solid #1e3a5f; border-radius: 8px; padding: 15px; border-left: 4px solid #00d4ff; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        .foto-setor-zoom { width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .foto-setor-zoom:hover { transform: scale(2.2); }
+
+        .foto-resp-zoom {
+            width: 32px; height: 32px; border-radius: 6px; object-fit: cover; border: 1px solid #00d4ff;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease; cursor: pointer; position: relative; z-index: 1;
+        }
+        .foto-resp-zoom:hover { transform: scale(2.5); box-shadow: 0 4px 15px rgba(0, 212, 255, 0.7); z-index: 20; }
+
+        .lista-resp-card { margin: 10px 0; background: rgba(2, 12, 20, 0.5); padding: 8px; border-radius: 6px; border: 1px solid #1e3a5f; max-height: 240px; overflow-y: auto; }
+        .resp-item-card { background: rgba(56, 189, 248, 0.08); padding: 10px; border-radius: 6px; margin-bottom: 8px; font-size: 12px; color: #cbd5e1; border: 1px solid rgba(56, 189, 248, 0.2); }
+        .resp-item-card.pausado { background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.3); }
+        
+        .btn-acao-resp { background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; padding: 3px 6px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold; }
+        .btn-pausar-resp { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; padding: 3px 6px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold; }
+        .btn-retornar-resp { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; padding: 3px 6px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold; }
+        .btn-excluir-resp { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 3px 6px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold; }
+
+        .acoes-card { display: flex; gap: 8px; margin-top: 12px; border-top: 1px solid rgba(30, 58, 95, 0.6); padding-top: 10px; }
+        .btn-acao-card { background: #1e3a5f; color: #38bdf8; border: 1px solid #00d4ff; padding: 6px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600; flex: 1; text-align: center; }
+        .btn-excluir-card { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 6px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h2>⚙ PCM360 — Cadastro de Setores</h2>
+            <button id="btnVoltarPainel" class="btn-voltar" type="button">⬅ Voltar ao Painel</button>
+        </div>
+
+        <div class="content-section">
+            <h3 style="color: #38bdf8; margin-bottom: 15px; font-size: 16px;">Cadastrar Novo Setor</h3>
+            <div class="form-row">
+                <div>
+                    <label>Nome do Setor</label>
+                    <input type="text" id="setor-nome" placeholder="Ex: Manutenção Mecânica">
+                </div>
+            </div>
+            <div class="form-row">
+                <div>
+                    <label>Link da Foto / Ícone do Setor (Google Drive)</label>
+                    <input type="text" id="setor-link-imagem" style="text-transform: none;" placeholder="Cole o link do Drive para ilustrar o setor">
+                </div>
+            </div>
+            <button id="btn-salvar-setor" class="btn-salvar" type="button">Salvar Setor no Base</button>
+        </div>
+
+        <div class="content-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="color: #38bdf8; font-size: 16px;">Setores Cadastrados</h3>
+                <button onclick="carregarSetores()" style="background: #1e3a5f; color: #38bdf8; border: 1px solid #00d4ff; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">🔄 Atualizar Lista</button>
+            </div>
+            <div id="loadingSetores" style="text-align: center; color: #94a3b8; font-size: 13px; padding: 20px;">Carregando setores...</div>
+            <div id="gridSetores" class="setores-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://mswszxzeczyusnjccxit.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_-vY5LDwjwPB-BbFO1UCfQw_2ztUDsUp";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function formatarLinkImagem(url) {
+            if (!url) return '';
+            url = url.trim();
+            if (url.includes('drive.google.com')) {
+                let fileId = '';
+                const matchD = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                const matchId = url.match(/id=([a-zA-Z0-9_-]+)/);
+                if (matchD && matchD[1]) fileId = matchD[1];
+                else if (matchId && matchId[1]) fileId = matchId[1];
+                if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
+            }
+            return url;
+        }
+
+        function obterIdEmpresaAtiva() {
+            const empresaMasterId = localStorage.getItem('master_empresa_ativa_id');
+            if (empresaMasterId) return empresaMasterId;
+            try {
+                const usuarioStr = localStorage.getItem('pcm_usuario');
+                if (!usuarioStr) return null;
+                const usuario = JSON.parse(usuarioStr);
+                return usuario.id || usuario.idEmpresa || usuario.id_empresa || null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('gridSetores');
+            if (grid) grid.innerHTML = '';
+
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) {
+                window.location.href = '0painel-master.html';
+                return;
+            }
+
+            const btnVoltar = document.getElementById('btnVoltarPainel');
+            if (btnVoltar) {
+                btnVoltar.addEventListener('click', () => {
+                    window.location.href = '0painel-master.html';
+                });
+            }
+            
+            const btnSalvar = document.getElementById('btn-salvar-setor');
+            if (btnSalvar) {
+                const novoBtn = btnSalvar.cloneNode(true);
+                btnSalvar.parentNode.replaceChild(novoBtn, btnSalvar);
+                novoBtn.addEventListener('click', salvarSetor);
+            }
+
+            carregarSetores();
+        });
+
+        async function salvarSetor() {
+            const nomeInput = document.getElementById('setor-nome').value.trim();
+            const nome = nomeInput.toUpperCase();
+            const linkBruto = document.getElementById('setor-link-imagem').value.trim();
+            const linkImagem = formatarLinkImagem(linkBruto);
+            
+            if(!nome) {
+                alert('Preencha o nome do setor!');
+                return;
+            }
+
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) {
+                alert('Erro: Sessão da empresa não encontrada. Faça login novamente.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const btnSalvar = document.getElementById('btn-salvar-setor');
+            btnSalvar.disabled = true;
+            btnSalvar.textContent = 'Salvando...';
+
+            try {
+                const { error } = await supabaseClient
+                    .from('setores')
+                    .insert([{ id_empresa: idEmpresa, nome: nome, link_imagem: linkImagem }]);
+
+                if (error) throw error;
+                alert('Setor cadastrado com sucesso!');
+                document.getElementById('setor-nome').value = '';
+                document.getElementById('setor-link-imagem').value = '';
+                carregarSetores();
+            } catch (erro) {
+                alert('Erro ao salvar no Supabase: ' + erro.message);
+            } finally {
+                btnSalvar.disabled = false;
+                btnSalvar.textContent = 'Salvar Setor no Base';
+            }
+        }
+
+        async function carregarSetores() {
+            const grid = document.getElementById('gridSetores');
+            const loading = document.getElementById('loadingSetores');
+            
+            if (loading) loading.style.display = 'block';
+            if (grid) grid.innerHTML = '';
+
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) {
+                if (loading) loading.style.display = 'none';
+                if (grid) grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #f87171; font-size: 13px; padding: 15px;">Sessão expirada. Faça login novamente.</div>';
+                return;
+            }
+
+            try {
+                const { data: setores, error: errSetor } = await supabaseClient
+                    .from('setores').select('*').eq('id_empresa', idEmpresa).order('created_at', { ascending: false });
+
+                if (errSetor) throw errSetor;
+
+                const { data: responsaveis, error: errResp } = await supabaseClient
+                    .from('responsaveis').select('*').eq('id_empresa', idEmpresa);
+
+                if (errResp) throw errResp;
+
+                if (loading) loading.style.display = 'none';
+
+                if (setores && setores.length > 0) {
+                    setores.forEach(setor => {
+                        const card = document.createElement('div');
+                        card.className = 'setor-card';
+                        
+                        const linkSetorFormatado = formatarLinkImagem(setor.link_imagem);
+                        const logoSetorHtml = linkSetorFormatado
+                            ? `<img src="${linkSetorFormatado}" alt="Setor" class="foto-setor-zoom">`
+                            : `<span style="font-size: 18px;">📌</span>`;
+
+                        const respArray = responsaveis ? responsaveis.filter(r => r.id_setor === setor.id) : [];
+
+                        let respListHtml = '';
+                        if (respArray.length > 0) {
+                            respArray.forEach((resp) => {
+                                const nomeResp = resp.nome || 'N/A';
+                                const userResp = resp.usuario || 'N/A';
+                                const senhaResp = resp.senha || 'N/A';
+                                const fotoResp = resp.link_imagem ? formatarLinkImagem(resp.link_imagem) : '';
+                                const statusResp = resp.status || 'Ativo';
+                                
+                                const avatarRespHtml = fotoResp 
+                                    ? `<img src="${fotoResp}" alt="Resp" class="foto-resp-zoom">`
+                                    : `<div style="width: 32px; height: 32px; border-radius: 6px; background: #020c14; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 1px solid #1e3a5f;">👤</div>`;
+
+                                const isPausado = statusResp === 'Pausado';
+                                const cardClassPausado = isPausado ? 'resp-item-card pausado' : 'resp-item-card';
+                                const avisoPausado = isPausado ? `<div style="color: #f87171; font-size: 10px; font-weight: bold; margin-bottom: 4px;">⚠️ ACESSO PAUSADO</div>` : '';
+                                const novoStatusDestino = isPausado ? 'Ativo' : 'Pausado';
+                                const textoBotaoPausar = isPausado ? '▶ Retornar' : '⏸ Pausar';
+                                const classeBotaoPausar = isPausado ? 'btn-retornar-resp' : 'btn-pausar-resp';
+
+                                respListHtml += `
+                                    <div class="${cardClassPausado}">
+                                        ${avisoPausado}
+                                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                                            <div style="flex-shrink: 0;">${avatarRespHtml}</div>
+                                            <div style="flex: 1; overflow: hidden;">
+                                                <span style="color: #38bdf8; font-weight: bold; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${nomeResp}</span>
+                                            </div>
+                                        </div>
+                                        <div style="background: rgba(2, 12, 20, 0.6); padding: 8px; border-radius: 4px; border: 1px solid rgba(0,212,255,0.15); display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+                                            <div>
+                                                <div style="font-size: 11px; color: #94a3b8;">Usuário: <strong style="color: #ffffff;">${userResp}</strong></div>
+                                                <div style="font-size: 11px; color: #94a3b8;">Senha: <strong style="color: #fbbf24;">${senhaResp}</strong></div>
+                                            </div>
+                                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                                <div style="display: flex; gap: 4px;">
+                                                    <button class="btn-acao-resp" onclick="editarCredencialResponsavel('${resp.id}', 'usuario', '${userResp}')">✏️ Usuário</button>
+                                                    <button class="btn-acao-resp" onclick="editarCredencialResponsavel('${resp.id}', 'senha', '${senhaResp}')">✏️ Senha</button>
+                                                </div>
+                                                <div style="display: flex; gap: 4px;">
+                                                    <button class="${classeBotaoPausar}" onclick="alterarStatusResponsavel('${resp.id}', '${novoStatusDestino}')">${textoBotaoPausar}</button>
+                                                    <button class="btn-excluir-resp" onclick="removerResponsavel('${resp.id}')">🗑️ Excluir</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        } else {
+                            respListHtml = '<div style="font-size: 11px; color: #94a3b8; text-align: center; padding: 5px;">Nenhum responsável vinculado.</div>';
+                        }
+
+                        card.innerHTML = `
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #1e3a5f; padding-bottom: 10px; margin-bottom: 10px;">
+                                    <div style="width: 44px; height: 44px; background: #020c14; border-radius: 8px; border: 1px solid #00d4ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        ${logoSetorHtml}
+                                    </div>
+                                    <div style="overflow: hidden;">
+                                        <h4 style="color: #00d4ff; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${setor.nome}</h4>
+                                        <span style="font-size: 10px; color: #94a3b8;">ID Setor: ${setor.id}</span>
+                                    </div>
+                                </div>
+                                <div style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Responsáveis e Credenciais:</div>
+                                <div class="lista-resp-card">${respListHtml}</div>
+                            </div>
+                            <div class="acoes-card">
+                                <button class="btn-acao-card" onclick="adicionarResponsavelCard('${setor.id}')">+ Novo Resp.</button>
+                                <button class="btn-excluir-card" onclick="excluirSetor('${setor.id}')">Excluir Setor</button>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                } else {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #64748b; font-size: 13px; padding: 15px;">Nenhum setor cadastrado para esta empresa ainda.</div>';
+                }
+            } catch (err) {
+                if (loading) loading.style.display = 'none';
+                if (grid) grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #f87171; font-size: 13px; padding: 15px;">Erro ao carregar os dados.</div>';
+            }
+        }
+
+        function gerarCredenciaisResponsavel(nome) {
+            const limpo = nome.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 5);
+            const randomNum = Math.floor(100 + Math.random() * 900);
+            return { usuario: `resp_${limpo}${randomNum}`, senha: Math.random().toString(36).slice(-8) };
+        }
+
+        async function adicionarResponsavelCard(idSetor) {
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) { alert('Sessão expirada.'); return; }
+
+            try {
+                const { data: empresaData, error: errEmp } = await supabaseClient.from('empresas').select('*').eq('id', idEmpresa).single();
+                if (errEmp) throw errEmp;
+
+                const limiteIdsLiberados = parseInt(empresaData?.ids_liberados || empresaData?.limite_ids || empresaData?.vagas || 1);
+
+                const { data: funcList } = await supabaseClient.from('funcionarios').select('id').eq('id_empresa', idEmpresa);
+                const totalFunc = funcList ? funcList.length : 0;
+
+                const { data: respList } = await supabaseClient.from('responsaveis').select('id').eq('id_empresa', idEmpresa);
+                const totalResp = respList ? respList.length : 0;
+
+                const totalGeralEmUso = 1 + totalResp + totalFunc;
+
+                if (totalGeralEmUso >= limiteIdsLiberados) {
+                    alert(`❌ Limite de IDs atingido!\nO limite desta empresa é de ${limiteIdsLiberados} ID(s) e já existem ${totalGeralEmUso} acessos ativos.`);
+                    return;
+                }
+
+                const nomeResp = prompt('Digite o nome do responsável e sua filial/turno:');
+                if (!nomeResp || !nomeResp.trim()) return;
+
+                const linkFotoResp = prompt('Cole o link da foto do responsável (Google Drive) ou deixe em branco:') || '';
+                const nomeFormatado = nomeResp.trim().toUpperCase();
+                const creds = gerarCredenciaisResponsavel(nomeFormatado);
+
+                const { error } = await supabaseClient.from('responsaveis').insert([{
+                    id_empresa: idEmpresa,
+                    id_setor: idSetor,
+                    nome: nomeFormatado,
+                    usuario: creds.usuario,
+                    senha: creds.senha,
+                    link_imagem: formatarLinkImagem(linkFotoResp),
+                    status: 'Ativo'
+                }]);
+
+                if (error) throw error;
+
+                carregarSetores();
+                alert('Responsável cadastrado com sucesso!');
+            } catch (err) {
+                alert('Erro ao adicionar responsável: ' + err.message);
+            }
+        }
+
+        async function editarCredencialResponsavel(idResp, tipo, valorAtual) {
+            const novoValor = prompt(`Digite o novo ${tipo}:`, valorAtual);
+            if (novoValor === null || !novoValor.trim()) return;
+            try {
+                const dadosUpdate = {};
+                dadosUpdate[tipo] = novoValor.trim();
+
+                const { error } = await supabaseClient.from('responsaveis').update(dadosUpdate).eq('id', idResp);
+                if (error) throw error;
+
+                carregarSetores();
+                alert('Atualizado com sucesso!');
+            } catch (err) { alert('Erro: ' + err.message); }
+        }
+
+        async function alterarStatusResponsavel(idResp, novoStatus) {
+            if (!confirm(`Deseja alterar o status do responsável?`)) return;
+            try {
+                const { error } = await supabaseClient.from('responsaveis').update({ status: novoStatus }).eq('id', idResp);
+                if (error) throw error;
+                carregarSetores();
+            } catch (err) { alert('Erro: ' + err.message); }
+        }
+
+        async function removerResponsavel(idResp) {
+            if (!confirm('Deseja excluir permanentemente este responsável?')) return;
+            try {
+                const { error } = await supabaseClient.from('responsaveis').delete().eq('id', idResp);
+                if (error) throw error;
+                carregarSetores();
+            } catch (err) { alert('Erro: ' + err.message); }
+        }
+
+        async function excluirSetor(id) {
+            if (!confirm('Deseja realmente excluir este setor por completo?')) return;
+            try {
+                await supabaseClient.from('responsaveis').delete().eq('id_setor', id);
+                
+                const { error } = await supabaseClient.from('setores').delete().eq('id', id);
+                if (error) throw error;
+                
+                alert('Setor excluído com sucesso!');
+                carregarSetores();
+            } catch (err) { alert('Erro ao excluir: ' + err.message); }
+        }
+    </script>
+</body>
+</html>

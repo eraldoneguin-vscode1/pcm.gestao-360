@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "pcm-360-gestao"
+  },
+  "targets": {
+    "pcm-360-gestao": {
+      "hosting": {
+        "pcm-360-gestao": [
+          "pcm-360-gestao"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

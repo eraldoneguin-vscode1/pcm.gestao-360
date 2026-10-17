@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM360 - Cadastro de Ativos e Frota</title>
+    <!-- SDK do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background-color: #051622;
+            background-image: linear-gradient(rgba(5, 22, 34, 0.75), rgba(5, 22, 34, 0.85)), url('fundo.png');
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            color: #ffffff; min-height: 100vh; padding: 15px;
+        }
+        .container { max-width: 900px; margin: 0 auto; background: rgba(8, 30, 48, 0.9); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3); padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3a5f; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .header h2 { color: #00d4ff; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        .btn-voltar { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s; }
+        .btn-voltar:hover { background: #475569; }
+        
+        .content-section { background: rgba(2, 12, 20, 0.6); padding: 15px; border-radius: 8px; border: 1px solid #1e3a5f; margin-bottom: 20px; }
+        .form-row { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .form-row-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px; }
+        
+        label { font-size: 12px; color: #cbd5e1; display: block; margin-bottom: 4px; font-weight: 500; }
+        input, select { width: 100%; padding: 10px; background: rgba(2, 12, 20, 0.8); border: 1px solid #1e3a5f; border-radius: 6px; color: #fff; font-size: 13px; }
+        #frota-modelo { text-transform: uppercase; }
+        input:focus, select:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 8px rgba(0, 212, 255, 0.4); }
+        
+        .btn-salvar { background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; transition: opacity 0.2s; margin-top: 10px; }
+        .btn-salvar:hover { opacity: 0.9; }
+        .btn-salvar:disabled { background: #64748b; cursor: not-allowed; }
+
+        .ativos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+        .ativo-card { background: rgba(4, 18, 30, 0.9); border: 1px solid #1e3a5f; border-radius: 8px; padding: 15px; border-left: 4px solid #f59e0b; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        .card-fotos-container { margin-top: 12px; border-top: 1px solid #1e3a5f; padding-top: 10px; }
+        .card-fotos-titulo { font-size: 11px; color: #94a3b8; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
+        .card-fotos-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        
+        .foto-slot {
+            width: 100%;
+            height: 55px;
+            background: rgba(2, 12, 20, 0.8);
+            border: 1px dashed #334155;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+            position: relative;
+        }
+        .foto-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .foto-slot img:hover {
+            transform: scale(2.6);
+            box-shadow: 0 6px 20px rgba(0, 212, 255, 0.7);
+            z-index: 30;
+        }
+        .foto-slot span {
+            font-size: 9px;
+            color: #64748b;
+            text-align: center;
+            padding: 2px;
+            z-index: 1;
+        }
+
+        /* Estilo limpo e zoom para a logo da empresa no cabeçalho */
+        .foto-empresa-zoom {
+            max-height: 48px; max-width: 160px; object-fit: contain; background: transparent;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
+        }
+        .foto-empresa-zoom:hover { transform: scale(2.2); z-index: 50; position: relative; }
+
+        .acoes-card { margin-top: 12px; border-top: 1px solid rgba(30, 58, 95, 0.6); padding-top: 10px; display: flex; justify-content: flex-end; }
+        .btn-excluir-resp { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; text-align: center; transition: background 0.2s; width: 100%; }
+        .btn-excluir-resp:hover { background: #ef4444; color: white; }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 12px; }
+            .form-row, .form-row-4 { grid-template-columns: 1fr; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Cabeçalho do Módulo Padronizado -->
+        <div class="header">
+            <!-- Logo da Empresa (Sem fundo, enxuta e com zoom) -->
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <img id="logado-empresa-logo" src="" alt="Logo da Empresa" class="foto-empresa-zoom" style="display: none;">
+                <span id="logado-empresa-placeholder" style="font-size: 11px; color: #94a3b8; font-weight: bold; text-transform: uppercase; display: none;">EMPRESA</span>
+            </div>
+
+            <!-- Logo do Sistema -->
+            <div>
+                <img src="logo-pcm360.png" alt="PCM360 Gestão" style="height: 40px; width: auto; object-fit: contain;">
+            </div>
+
+            <!-- Botão Voltar -->
+            <button id="btnVoltarPainel" class="btn-voltar" type="button">⬅ Voltar ao Painel</button>
+        </div>
+
+        <div style="margin-bottom: 20px; border-bottom: 1px solid #1e3a5f; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <h2 style="color: #00d4ff; font-size: 18px;">🚜 Cadastro de Ativos e Frota</h2>
+        </div>
+
+        <!-- Seção de Cadastro de Novo Ativo -->
+        <div class="content-section">
+            <h3 style="color: #38bdf8; margin-bottom: 15px; font-size: 16px;">Cadastrar Novo Ativo / Máquina</h3>
+            
+            <div class="form-row">
+                <div>
+                    <label>Modelo do Ativo (Nome)</label>
+                    <input type="text" id="frota-modelo" placeholder="EX: TRATOR JOHN DEERE 7230">
+                </div>
+                <div>
+                    <label>Nº do Ativo (Código)</label>
+                    <input type="text" id="frota-ativo" placeholder="0000-00" maxlength="7">
+                </div>
+            </div>
+
+            <label style="color: #00d4ff; margin-top: 15px; margin-bottom: 6px; font-weight: bold; font-size: 13px;">🔗 Links das 4 Fotos Obrigatórias do Ativo (URL das Imagens)</label>
+            
+            <div class="form-row-4">
+                <div>
+                    <label>Link Foto Frente *</label>
+                    <input type="text" id="foto-frente" placeholder="Obrigatório..." style="text-transform: none;">
+                </div>
+                <div>
+                    <label>Link Foto Esquerdo *</label>
+                    <input type="text" id="foto-esquerdo" placeholder="Obrigatório..." style="text-transform: none;">
+                </div>
+            </div>
+            <div class="form-row-4">
+                <div>
+                    <label>Link Foto Direito *</label>
+                    <input type="text" id="foto-direito" placeholder="Obrigatório..." style="text-transform: none;">
+                </div>
+                <div>
+                    <label>Link Foto Traseira *</label>
+                    <input type="text" id="foto-traseira" placeholder="Obrigatório..." style="text-transform: none;">
+                </div>
+            </div>
+
+            <button id="btn-salvar-frota" class="btn-salvar" type="button">Salvar Ativo na Base</button>
+        </div>
+
+        <!-- Seção de Listagem dos Ativos Cadastrados -->
+        <div class="content-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="color: #38bdf8; font-size: 16px;">Ativos Cadastrados</h3>
+                <button onclick="carregarAtivos()" style="background: #1e3a5f; color: #38bdf8; border: 1px solid #00d4ff; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">🔄 Atualizar Lista</button>
+            </div>
+            
+            <div id="loadingAtivos" style="text-align: center; color: #94a3b8; font-size: 13px; padding: 20px;">Carregando ativos...</div>
+            <div id="gridAtivos" class="ativos-grid"></div>
+        </div>
+    </div>
+
+    <!-- Scripts de Conexão com Supabase e Regras de Negócio -->
+    <script>
+        const SUPABASE_URL = "https://mswszxzeczyusnjccxit.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_-vY5LDwjwPB-BbFO1UCfQw_2ztUDsUp";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function formatarLinkImagem(url) {
+            if (!url) return '';
+            url = url.trim();
+            if (url.includes('drive.google.com')) {
+                let fileId = '';
+                const matchD = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                const matchId = url.match(/id=([a-zA-Z0-9_-]+)/);
+                if (matchD && matchD[1]) fileId = matchD[1];
+                else if (matchId && matchId[1]) fileId = matchId[1];
+                if (fileId) return `https://lh3.googleusercontent.com/d/${fileId}`;
+            }
+            return url;
+        }
+
+        function obterIdEmpresaAtiva() {
+            const empresaMasterId = localStorage.getItem('master_empresa_ativa_id');
+            if (empresaMasterId) return empresaMasterId;
+
+            try {
+                const usuario = JSON.parse(localStorage.getItem('pcm_usuario') || '{}');
+                return usuario.idEmpresa || usuario.id_empresa || usuario.id || null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const usuarioStr = localStorage.getItem('pcm_usuario');
+            if (!usuarioStr) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const usuario = JSON.parse(usuarioStr);
+                const cargo = usuario.cargo ? usuario.cargo.toLowerCase() : '';
+
+                if (cargo === 'master') {
+                    const empresaMasterId = localStorage.getItem('master_empresa_ativa_id');
+                    if (!empresaMasterId) {
+                        alert('⚠️ Por favor, selecione uma empresa no Painel Master antes de gerenciar os ativos.');
+                        window.location.href = '0painel-master.html';
+                        return;
+                    }
+                }
+            } catch (e) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            carregarCabecalhoEmpresa();
+
+            const btnVoltar = document.getElementById('btnVoltarPainel');
+            if (btnVoltar) {
+                btnVoltar.addEventListener('click', () => {
+                    window.location.href = '0painel-master.html';
+                });
+            }
+
+            document.getElementById('btn-salvar-frota').addEventListener('click', salvarFrota);
+            
+            const inputAtivo = document.getElementById('frota-ativo');
+            inputAtivo.addEventListener('input', (e) => {
+                let valor = e.target.value.replace(/\D/g, '');
+                if (valor.length > 4) {
+                    valor = valor.substring(0, 4) + '-' + valor.substring(4, 6);
+                }
+                e.target.value = valor;
+            });
+
+            carregarAtivos();
+        });
+
+        async function carregarCabecalhoEmpresa() {
+            const empresaId = obterIdEmpresaAtiva();
+            if (!empresaId) return;
+
+            try {
+                const { data: empresa, error } = await supabaseClient
+                    .from('empresas')
+                    .select('*')
+                    .eq('id', empresaId)
+                    .single();
+
+                if (error || !empresa) return;
+
+                const linkLogoBruto = empresa.link_imagem || empresa.foto || empresa.logo || '';
+                const logoEmpresa = formatarLinkImagem(linkLogoBruto);
+
+                const elLogo = document.getElementById('logado-empresa-logo');
+                const elPlaceholder = document.getElementById('logado-empresa-placeholder');
+
+                if (elLogo && logoEmpresa) {
+                    elLogo.src = logoEmpresa;
+                    elLogo.style.display = 'block';
+                    if (elPlaceholder) elPlaceholder.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("Erro ao carregar a logo da empresa:", err);
+            }
+        }
+
+        async function salvarFrota() {
+            const empresaId = obterIdEmpresaAtiva();
+
+            if (!empresaId) {
+                alert('Sessão expirada ou usuário não logado. Faça login novamente.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const nome = document.getElementById('frota-modelo').value.trim().toUpperCase();
+            const codigo = document.getElementById('frota-ativo').value.trim();
+
+            const fotoFrente = formatarLinkImagem(document.getElementById('foto-frente').value.trim());
+            const fotoEsquerdo = formatarLinkImagem(document.getElementById('foto-esquerdo').value.trim());
+            const fotoDireito = formatarLinkImagem(document.getElementById('foto-direito').value.trim());
+            const fotoTraseira = formatarLinkImagem(document.getElementById('foto-traseira').value.trim());
+
+            if (!nome || !codigo) {
+                alert('❌ Preencha o modelo e o código do ativo corretamente.');
+                return;
+            }
+
+            if (!fotoFrente || !fotoEsquerdo || !fotoDireito || !fotoTraseira) {
+                alert('❌ Atenção: É obrigatório informar os links das 4 fotos do ativo (Frente, Esquerdo, Direito e Traseira)!');
+                return;
+            }
+
+            const regexAtivo = /^\d{4}-\d{2}$/;
+            if (!regexAtivo.test(codigo)) {
+                alert('❌ O Código do Ativo deve seguir o formato exato: 0000-00 (Ex: 1234-56)');
+                return;
+            }
+
+            const btnSalvar = document.getElementById('btn-salvar-frota');
+            btnSalvar.disabled = true;
+            btnSalvar.textContent = 'Salvando ativo na Base...';
+
+            try {
+                const { error } = await supabaseClient
+                    .from('ativos')
+                    .insert([
+                        {
+                            empresa_id: String(empresaId),
+                            nome: nome,
+                            codigo: codigo,
+                            "foto frente": fotoFrente,
+                            "foto esquerdo": fotoEsquerdo,
+                            "foto direito": fotoDireito,
+                            "foto traseira": fotoTraseira,
+                            status: 'Ativo'
+                        }
+                    ]);
+
+                if (error) throw error;
+
+                alert('✅ Ativo cadastrado com sucesso no banco de dados!');
+                
+                document.getElementById('frota-modelo').value = '';
+                document.getElementById('frota-ativo').value = '';
+                document.getElementById('foto-frente').value = '';
+                document.getElementById('foto-esquerdo').value = '';
+                document.getElementById('foto-direito').value = '';
+                document.getElementById('foto-traseira').value = '';
+
+                carregarAtivos();
+            } catch (err) {
+                alert('❌ Erro ao salvar ativo no Supabase: ' + err.message);
+            } finally {
+                btnSalvar.disabled = false;
+                btnSalvar.textContent = 'Salvar Ativo na Base';
+            }
+        }
+
+        async function carregarAtivos() {
+            const empresaId = obterIdEmpresaAtiva();
+            if (!empresaId) return;
+
+            const grid = document.getElementById('gridAtivos');
+            const loading = document.getElementById('loadingAtivos');
+            loading.style.display = 'block';
+            grid.innerHTML = '';
+
+            try {
+                const { data: ativos, error } = await supabaseClient
+                    .from('ativos')
+                    .select('*')
+                    .eq('empresa_id', String(empresaId))
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                loading.style.display = 'none';
+
+                if (ativos && ativos.length > 0) {
+                    ativos.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'ativo-card';
+                        
+                        let codigoBruto = String(item.codigo || '').trim();
+                        if (codigoBruto.length > 0 && codigoBruto.length < 7) {
+                            codigoBruto = codigoBruto.padStart(7, '0');
+                        }
+                        const codigoFormatado = codigoBruto || '0000-00';
+
+                        const imgFrente = formatarLinkImagem(item["foto frente"]);
+                        const imgEsquerdo = formatarLinkImagem(item["foto esquerdo"]);
+                        const imgDireito = formatarLinkImagem(item["foto direito"]);
+                        const imgTraseira = formatarLinkImagem(item["foto traseira"]);
+
+                        card.innerHTML = `
+                            <div>
+                                <h4 style="color: #00d4ff; font-size: 15px; margin-bottom: 6px;">🚜 ${item.nome}</h4>
+                                <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px;"><strong>Nº Ativo:</strong> ${codigoFormatado}</p>
+                                
+                                <div class="card-fotos-container">
+                                    <div class="card-fotos-titulo">Fotos Obrigatórias (4 Ângulos)</div>
+                                    <div class="card-fotos-grid">
+                                        <div class="foto-slot">
+                                            <span>Frente</span>
+                                            ${imgFrente ? `<img src="${imgFrente}" alt="Frente" onerror="this.style.display='none'">` : ''}
+                                        </div>
+                                        <div class="foto-slot">
+                                            <span>Esq.</span>
+                                            ${imgEsquerdo ? `<img src="${imgEsquerdo}" alt="Esquerdo" onerror="this.style.display='none'">` : ''}
+                                        </div>
+                                        <div class="foto-slot">
+                                            <span>Dir.</span>
+                                            ${imgDireito ? `<img src="${imgDireito}" alt="Direito" onerror="this.style.display='none'">` : ''}
+                                        </div>
+                                        <div class="foto-slot">
+                                            <span>Trás.</span>
+                                            ${imgTraseira ? `<img src="${imgTraseira}" alt="Traseira" onerror="this.style.display='none'">` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="acoes-card">
+                                <button class="btn-excluir-resp" onclick="excluirAtivo('${item.id}')">🗑️ Excluir Ativo</button>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                } else {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #64748b; font-size: 13px; padding: 15px;">Nenhum ativo cadastrado para esta empresa.</div>';
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #f87171; font-size: 13px; padding: 15px;">Erro ao carregar os ativos do Supabase.</div>';
+            }
+        }
+
+        async function excluirAtivo(idAtivo) {
+            if (!confirm('Deseja realmente excluir permanentemente este ativo?')) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('ativos')
+                    .delete()
+                    .eq('id', idAtivo);
+
+                if (error) throw error;
+                alert('Ativo excluído com sucesso!');
+                carregarAtivos();
+            } catch (err) {
+                alert('Erro ao excluir: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

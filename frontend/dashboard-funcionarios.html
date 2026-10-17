@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM-360 - Dashboard de Funcionários e Equipe</title>
+    <!-- SDK do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-image: url('fundo.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-color: #0b0f19;
+        }
+        .dashboard-card {
+            background: rgba(17, 24, 39, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+            position: relative;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8 text-slate-100 flex flex-col items-center">
+
+    <!-- Overlay escuro sutil -->
+    <div class="absolute inset-0 bg-[#070a12]/80 backdrop-blur-sm -z-10"></div>
+
+    <!-- Container Principal -->
+    <div class="w-full max-w-7xl flex flex-col gap-6">
+        
+        <!-- Cabeçalho Principal -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-2 gap-4">
+            <div>
+                <h1 class="text-3xl sm:text-4xl font-light tracking-wide text-white">Dashboard <span class="text-emerald-400 font-normal">Funcionários & Indicadores</span>[cite: 6]</h1>
+                <p class="text-slate-400 text-sm mt-1">Gestão inteligente de equipes, cargos, setores e ordens de serviço[cite: 6]</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="0painel-master.html" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-lg shadow-emerald-600/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Painel Master
+                </a>
+            </div>
+        </div>
+
+        <!-- 5 Primeiros Blocos de Indicadores / KPIs -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            
+            <div class="dashboard-card p-5 flex flex-col justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">Setores Cadastrados</span>
+                <div class="my-3">
+                    <span id="kpiSetoresQtd" class="text-3xl font-light text-white">--</span>
+                </div>
+                <span class="text-xs text-emerald-400">Total na empresa</span>
+            </div>
+
+            <div class="dashboard-card p-5 flex flex-col justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">Cargos Cadastrados</span>
+                <div class="my-3">
+                    <span id="kpiCargosList" class="text-sm font-semibold text-emerald-300 truncate block">Carregando...</span>
+                </div>
+                <span class="text-xs text-slate-400">Funções ativas</span>
+            </div>
+
+            <div class="dashboard-card p-5 flex flex-col justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">Setor c/ Mais Líderes</span>
+                <div class="my-3">
+                    <span id="kpiSetorLideres" class="text-sm font-bold text-amber-400 truncate block">--</span>
+                </div>
+                <span class="text-xs text-slate-400">Liderança concentrada</span>
+            </div>
+
+            <div class="dashboard-card p-5 flex flex-col justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">Maior Lotação</span>
+                <div class="my-3">
+                    <span id="kpiRankSetor" class="text-sm font-bold text-sky-400 truncate block">--</span>
+                </div>
+                <span class="text-xs text-slate-400">Setor com mais pessoal</span>
+            </div>
+
+            <div class="dashboard-card p-5 flex flex-col justify-between">
+                <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">Controle de IDs</span>
+                <div class="my-3">
+                    <span id="kpiIdsControl" class="text-2xl font-light text-amber-400">-- / --</span>
+                </div>
+                <span class="text-xs text-slate-400">Liberados x Em Uso/Ativo</span>
+            </div>
+
+        </div>
+
+        <!-- Seção Intermediária: 2 Blocos de Gráficos Maiores -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <div class="dashboard-card p-6 flex flex-col justify-between">
+                <h3 class="text-base font-medium text-slate-200 mb-4 text-center">Quantidade de OS por Equipes / Setores</h3>
+                <div class="w-full h-64 flex items-center justify-center">
+                    <canvas id="graficoOSSetores"></canvas>
+                </div>
+                <div class="flex justify-center gap-4 mt-4 text-xs text-slate-400">
+                    <span>Distribuição de ordens de serviço ativas e concluídas</span>
+                </div>
+            </div>
+
+            <div class="dashboard-card p-6 flex flex-col justify-between">
+                <h3 class="text-base font-medium text-slate-200 mb-4 text-center">Evolução de Cadastro de Funcionários por Setores</h3>
+                <div class="w-full h-64 flex items-center justify-center">
+                    <canvas id="graficoEvolucaoSetores"></canvas>
+                </div>
+                <div class="flex justify-center gap-4 mt-4 text-xs text-slate-400">
+                    <span>Histórico temporal de alocações</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Seção Inferior: Quadro Geral / Relatório de Pessoal -->
+        <div class="dashboard-card p-6 sm:p-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-2">
+                <div>
+                    <h2 class="text-xl font-medium text-white tracking-wide">Quadro Geral de Funcionários da Empresa[cite: 6]</h2>
+                    <p class="text-slate-400 text-xs mt-0.5">Clique em qualquer registro da tabela para exibir os dados detalhados do colaborador[cite: 6]</p>
+                </div>
+                <div class="text-xs px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg">
+                    Sincronizado com Supabase[cite: 6]
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="text-xs uppercase text-slate-400 border-b border-slate-800/80">
+                        <tr>
+                            <th class="py-3 px-4">Nome / Matrícula</th>
+                            <th class="py-3 px-4">Cargo / Função</th>
+                            <th class="py-3 px-4">Setor</th>
+                            <th class="py-3 px-4">Status / Acesso</th>
+                            <th class="py-3 px-4 text-right">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaFuncionariosBody">
+                        <tr>
+                            <td colspan="5" class="py-6 text-center text-slate-500">Carregando registros do banco de dados...[cite: 6]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal de Detalhes do Funcionário -->
+    <div id="modalDetalhes" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="dashboard-card max-w-lg w-full p-6 sm:p-8 border border-emerald-500/30 shadow-2xl relative">
+            <button onclick="fecharModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+            <div class="flex items-center gap-4 mb-6">
+                <img id="modalFoto" src="https://via.placeholder.com/80?text=Foto" alt="Foto" class="w-16 h-16 rounded-full object-cover border-2 border-emerald-400">
+                <div>
+                    <h3 id="modalNome" class="text-xl font-bold text-white">Nome do Funcionário</h3>
+                    <p id="modalCargoSetor" class="text-sm text-emerald-400">Cargo - Setor</p>
+                </div>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300 border-t border-slate-800 pt-4">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Matrícula:</span>
+                    <span id="modalMatricula" class="font-semibold text-white">--</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Status:</span>
+                    <span id="modalStatus" class="font-semibold text-white">--</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">ID do Usuário / Registro:</span>
+                    <span id="modalId" class="font-semibold text-white">--</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">ID da Empresa:</span>
+                    <span id="modalIdEmpresa" class="font-semibold text-white">--</span>
+                </div>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+                <button onclick="fecharModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm transition">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://mswszxzeczyusnjccxit.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_-vY5LDwjwPB-BbFO1UCfQw_2ztUDsUp";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let chartOSSetoresInstance = null;
+        let chartEvolucaoInstance = null;
+        let listaFuncionariosGlobal = [];
+
+        function obterUsuarioLogado() {
+            try {
+                const usuarioStr = localStorage.getItem('pcm_usuario');
+                if (!usuarioStr) return { nome: 'Convidado', tipo: 'empresa', id: null };
+                return JSON.parse(usuarioStr);
+            } catch (e) {
+                return { nome: 'Convidado', tipo: 'empresa', id: null };
+            }
+        }
+
+        async function carregarDashboard() {
+            const usuario = obterUsuarioLogado();
+            const idEmpresa = localStorage.getItem('master_empresa_ativa_id') || usuario.id || usuario.idEmpresa || usuario.id_empresa || usuario.empresa_id;
+
+            try {
+                // 1. Carregar Dados da Empresa (para obter os IDs liberados pelo master)
+                let empresaData = null;
+                if (idEmpresa) {
+                    const { data: empRes } = await supabaseClient
+                        .from('empresas')
+                        .select('*')
+                        .eq('id', idEmpresa)
+                        .single();
+                    empresaData = empRes;
+                }
+
+                // 2. Carregar Funcionários
+                let queryFunc = supabaseClient.from('funcionarios').select('*');
+                if (idEmpresa) {
+                    queryFunc = queryFunc.eq('id_empresa', idEmpresa);
+                }
+                const { data: funcionarios, error: errFunc } = await queryFunc;
+                if (errFunc) throw errFunc;
+                listaFuncionariosGlobal = funcionarios || [];
+
+                // 3. Carregar Setores cadastrados na tabela específica 'setores'
+                let querySetores = supabaseClient.from('setores').select('*');
+                if (idEmpresa) {
+                    querySetores = querySetores.eq('id_empresa', idEmpresa);
+                }
+                const { data: setoresTab } = await querySetores;
+
+                // 4. Carregar Ordens de Serviço para os gráficos
+                let queryOS = supabaseClient.from('ordens_servico').select('*');
+                if (idEmpresa) {
+                    queryOS = queryOS.eq('empresa_id', idEmpresa);
+                }
+                const { data: ordensServico } = await queryOS;
+
+                processarIndicadores(listaFuncionariosGlobal, setoresTab || [], ordensServico || [], empresaData);
+            } catch (error) {
+                console.error("Erro ao carregar dados:", error);
+                document.getElementById('tabelaFuncionariosBody').innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-400">Erro ao carregar dados do Supabase.[cite: 6]</td></tr>`;
+            }
+        }
+
+        function processarIndicadores(funcionarios, setoresTab, ordensServico, empresaData) {
+            // Setores únicos mapeados
+            let setoresUnicos = new Set();
+            setoresTab.forEach(s => { if (s.nome) setoresUnicos.add(s.nome); });
+            funcionarios.forEach(f => { if (f.setor) setoresUnicos.add(f.setor); });
+            
+            document.getElementById('kpiSetoresQtd').textContent = setoresUnicos.size;
+
+            // Cargos cadastrados
+            let cargosMap = {};
+            let setoresMap = {};
+            let lideresSetorMap = {};
+            let ativosCount = 0;
+
+            funcionarios.forEach(f => {
+                const cargo = f.cargo || 'Operacional';
+                cargosMap[cargo] = (cargosMap[cargo] || 0) + 1;
+
+                const setor = f.setor || 'Geral';
+                setoresMap[setor] = (setoresMap[setor] || 0) + 1;
+
+                const cargoLower = cargo.toLowerCase();
+                if (cargoLower.includes('lider') || cargoLower.includes('líder') || cargoLower.includes('supervisor') || cargoLower.includes('gerente')) {
+                    lideresSetorMap[setor] = (lideresSetorMap[setor] || 0) + 1;
+                }
+
+                if ((f.status || 'Ativo') === 'Ativo') {
+                    ativosCount++;
+                }
+            });
+
+            const cargosArr = Object.keys(cargosMap);
+            document.getElementById('kpiCargosList').textContent = cargosArr.length > 0 ? cargosArr.join(', ') : 'Nenhum';
+
+            // Setor com maior quantidade de líderes
+            let maiorSetorLideres = 'Nenhum';
+            let maxLideres = -1;
+            for (const [s, qtd] of Object.entries(lideresSetorMap)) {
+                if (qtd > maxLideres) {
+                    maxLideres = qtd;
+                    maiorSetorLideres = s;
+                }
+            }
+            document.getElementById('kpiSetorLideres').textContent = maiorSetorLideres;
+
+            // Setor com maior quantidade de funcionários
+            let maiorSetor = 'Geral';
+            let maxColab = -1;
+            for (const [s, qtd] of Object.entries(setoresMap)) {
+                if (qtd > maxColab) {
+                    maxColab = qtd;
+                    maiorSetor = s;
+                }
+            }
+            document.getElementById('kpiRankSetor').textContent = maiorSetor;
+
+            // Controle de IDs: Limite liberado pelo Master x IDs Ativos/Em uso
+            const limiteLiberado = parseInt(
+                empresaData?.ids_liberados || 
+                empresaData?.limite_ids || 
+                empresaData?.qtd_ids || 
+                empresaData?.vagas || 
+                funcionarios.length
+            );
+            document.getElementById('kpiIdsControl').textContent = `${limiteLiberado} / ${ativosCount}`;
+
+            // Popular Tabela de Funcionários
+            let tbodyHTML = '';
+            if (funcionarios.length > 0) {
+                funcionarios.forEach(f => {
+                    const cargoAtual = f.cargo || 'Operacional';
+                    const isAtivo = (f.status || 'Ativo') === 'Ativo';
+                    const badgeClass = isAtivo 
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+
+                    tbodyHTML += `
+                        <tr onclick="abrirDetalhes('${f.id}')" class="border-b border-slate-800/40 hover:bg-slate-800/40 transition cursor-pointer">
+                            <td class="py-3 px-4 font-semibold text-white">
+                                ${f.nome || 'Sem Nome'} 
+                                <span class="block text-xs text-slate-400 font-normal">Mat: ${f.matricula || '---'}</span>
+                            </td>
+                            <td class="py-3 px-4 text-slate-300 capitalize">${cargoAtual}</td>
+                            <td class="py-3 px-4 text-slate-400">${f.setor || 'Geral'}</td>
+                            <td class="py-3 px-4">
+                                <span class="px-2.5 py-1 rounded-md text-xs font-semibold ${badgeClass}">
+                                    ${f.status || 'Ativo'}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                                <span class="text-xs text-emerald-400 font-medium underline">Ver Dados</span>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbodyHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500">Nenhum registro encontrado para exibir.[cite: 6]</td></tr>`;
+            }
+            document.getElementById('tabelaFuncionariosBody').innerHTML = tbodyHTML;
+
+            // Renderizar Gráficos
+            renderizarGraficos(ordensServico, setoresMap, funcionarios);
+        }
+
+        function renderizarGraficos(ordensServico, setoresMap, funcionarios) {
+            if (chartOSSetoresInstance) chartOSSetoresInstance.destroy();
+            if (chartEvolucaoInstance) chartEvolucaoInstance.destroy();
+
+            // 1. Gráfico de Rosca: Quantidade de OS por equipes/setores responsáveis
+            let osPorSetor = {};
+            ordensServico.forEach(os => {
+                const setoresOS = os.setores || 'Geral';
+                setoresOS.split(',').forEach(s => {
+                    const setorLimpo = s.trim();
+                    if (setorLimpo) {
+                        osPorSetor[setorLimpo] = (osPorSetor[setorLimpo] || 0) + 1;
+                    }
+                });
+            });
+
+            const labelsOS = Object.keys(osPorSetor);
+            const dataOS = Object.values(osPorSetor);
+
+            const ctxOS = document.getElementById('graficoOSSetores').getContext('2d');
+            chartOSSetoresInstance = new Chart(ctxOS, {
+                type: 'doughnut',
+                data: {
+                    labels: labelsOS.length > 0 ? labelsOS : ['Sem OS registradas'],
+                    datasets: [{
+                        data: dataOS.length > 0 ? dataOS : [1],
+                        backgroundColor: ['#10b981', '#38bdf8', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { size: 11 } } } },
+                    cutout: '65%'
+                }
+            });
+
+            // 2. Gráfico de Linha: Evolução de cadastro de funcionários por setores
+            const labelsSetores = Object.keys(setoresMap);
+            const dataSetores = Object.values(setoresMap);
+
+            const ctxEvolucao = document.getElementById('graficoEvolucaoSetores').getContext('2d');
+            chartEvolucaoInstance = new Chart(ctxEvolucao, {
+                type: 'line',
+                data: {
+                    labels: labelsSetores.length > 0 ? labelsSetores : ['Geral'],
+                    datasets: [{
+                        label: 'Colaboradores por Setor',
+                        data: dataSetores.length > 0 ? dataSetores : [0],
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 }, precision: 0 } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function abrirDetalhes(id) {
+            const func = listaFuncionariosGlobal.find(f => String(f.id) === String(id));
+            if (!func) return;
+
+            document.getElementById('modalNome').textContent = func.nome || 'Sem Nome';
+            document.getElementById('modalCargoSetor').textContent = `${func.cargo || 'Operacional'} • ${func.setor || 'Geral'}`;
+            document.getElementById('modalMatricula').textContent = func.matricula || '---';
+            document.getElementById('modalStatus').textContent = func.status || 'Ativo';
+            document.getElementById('modalId').textContent = func.id || '---';
+            document.getElementById('modalIdEmpresa').textContent = func.id_empresa || func.empresa_id || '---';
+            
+            const fotoUrl = func.link_imagem ? func.link_imagem.trim() : '';
+            document.getElementById('modalFoto').src = fotoUrl ? fotoUrl : 'https://via.placeholder.com/80?text=Foto';
+
+            document.getElementById('modalDetalhes').classList.remove('hidden');
+            document.getElementById('modalDetalhes').classList.add('flex');
+        }
+
+        function fecharModal() {
+            document.getElementById('modalDetalhes').classList.remove('flex');
+            document.getElementById('modalDetalhes').classList.add('hidden');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            carregarDashboard();
+        });
+    </script>
+</body>
+</html>

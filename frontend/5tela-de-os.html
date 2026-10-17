@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM-360 — Abertura e Gestão de Ordem de Serviço</title>
+    <!-- SDK do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background-color: #051622;
+            background-image: linear-gradient(rgba(5, 22, 34, 0.75), rgba(5, 22, 34, 0.85)), url('fundo.png');
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            color: #ffffff; min-height: 100vh; padding: 15px;
+        }
+        .container { max-width: 950px; margin: 0 auto; background: rgba(8, 30, 48, 0.9); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3); padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3a5f; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .header h2 { color: #00d4ff; font-size: 18px; }
+        .btn-voltar { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s; }
+        .btn-voltar:hover { background: #475569; }
+        .content-section { background: rgba(2, 12, 20, 0.6); padding: 15px; border-radius: 8px; border: 1px solid #1e3a5f; margin-bottom: 20px; }
+        
+        .user-profile-header { display: flex; align-items: center; gap: 15px; background: rgba(2, 12, 20, 0.8); border: 1px solid #1e3a5f; border-radius: 8px; padding: 12px 15px; margin-bottom: 15px; }
+        
+        .foto-perfil-header {
+            width: 52px; height: 52px; border-radius: 6px; object-fit: contain;
+            border: 1px solid rgba(0, 212, 255, 0.4); background: transparent;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease; cursor: pointer; position: relative; z-index: 1;
+        }
+        .foto-perfil-header:hover { transform: scale(2.5); box-shadow: 0 6px 20px rgba(0, 212, 255, 0.7); z-index: 30; }
+
+        .foto-empresa-zoom {
+            max-height: 48px; max-width: 160px; object-fit: contain; background: transparent;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
+        }
+        .foto-empresa-zoom:hover { transform: scale(2.2); z-index: 50; position: relative; }
+
+        .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+        
+        .radio-group-container, .checkbox-group-container { background: rgba(2, 12, 20, 0.8); border: 1px solid #1e3a5f; border-radius: 6px; padding: 8px 12px; margin-top: 5px; display: flex; align-items: center; justify-content: space-between; min-height: 42px; }
+        .checkbox-group-container { flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
+        .radio-label, .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #e2e8f0; cursor: pointer; }
+        .radio-label input[type="radio"], .checkbox-label input[type="checkbox"] { accent-color: #00d4ff; width: 16px; height: 16px; cursor: pointer; margin: 0; }
+
+        input, select, textarea { width: 100%; padding: 10px; background: rgba(2, 12, 20, 0.8); border: 1px solid #1e3a5f; border-radius: 6px; color: #fff; margin-top: 5px; font-size: 14px; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 8px rgba(0, 212, 255, 0.4); }
+        textarea { resize: vertical; min-height: 80px; }
+        
+        .btn-salvar { background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; margin-top: 5px; }
+        .btn-salvar:hover { opacity: 0.9; }
+        
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; margin-top: 15px; }
+        .os-card { border-radius: 8px; padding: 16px; position: relative; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
+        
+        .os-card.aberta { background: rgba(80, 15, 15, 0.75); border: 1px solid rgba(248, 113, 113, 0.5); border-left: 6px solid #f87171; }
+        .os-card.andamento { background: rgba(6, 78, 59, 0.75); border: 1px solid rgba(52, 211, 153, 0.5); border-left: 6px solid #34d399; }
+        .os-card.pausada { background: rgba(113, 63, 18, 0.75); border: 1px solid rgba(251, 191, 36, 0.5); border-left: 6px solid #fbbf24; }
+        
+        @keyframes piscarAlerta {
+            0% { border-color: rgba(248, 113, 113, 1); box-shadow: 0 0 15px rgba(248, 113, 113, 0.8); }
+            50% { border-color: rgba(248, 113, 113, 0.2); box-shadow: 0 0 2px rgba(248, 113, 113, 0.1); }
+            100% { border-color: rgba(248, 113, 113, 1); box-shadow: 0 0 15px rgba(248, 113, 113, 0.8); }
+        }
+        .card-piscando { animation: piscarAlerta 1.2s infinite ease-in-out; }
+
+        .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 12px; }
+        .btn-acao { padding: 8px 4px; font-size: 11px; font-weight: 600; border-radius: 4px; border: none; cursor: pointer; text-align: center; }
+        .btn-acao-iniciar { background: #3b82f6; color: white; grid-column: span 2; }
+        .btn-acao-pausar { background: #f59e0b; color: #051622; }
+        .btn-acao-finalizar { background: #10b981; color: white; grid-column: span 2; }
+        .btn-acao-reiniciar { background: #06b6d4; color: white; grid-column: span 2; }
+        .btn-acao-pecas { background: #6366f1; color: white; grid-column: span 2; }
+        .btn-acao-chave { background: #8b5cf6; color: white; grid-column: span 2; }
+        .btn-acao:hover { opacity: 0.85; }
+
+        /* Estilo do Modal de Ajudantes */
+        #modal-ajuda { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 15px; backdrop-filter: blur(4px); }
+        .modal-content { background: #0b2233; border: 1px solid #00d4ff; border-radius: 10px; width: 100%; max-width: 450px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); max-height: 90vh; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <img id="logado-empresa-logo" src="" alt="Logo da Empresa" class="foto-empresa-zoom" style="display: none;">
+                <span id="logado-empresa-placeholder" style="font-size: 11px; color: #94a3b8; font-weight: bold; text-transform: uppercase; display: none;">EMPRESA</span>
+            </div>
+            <div>
+                <img src="logo-pcm360.png" alt="PCM360 Gestão" style="height: 40px; width: auto; object-fit: contain;">
+            </div>
+            <button id="btn-voltar" class="btn-voltar" type="button" onclick="window.location.href='0painel-master.html'">⬅ Voltar ao Painel</button>
+        </div>
+
+        <div style="margin-bottom: 20px; border-bottom: 1px solid #1e3a5f; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <h2 style="color: #00d4ff; font-size: 18px;">PCM-360 — Abertura e Gestão de Ordem de Serviço</h2>
+        </div>
+
+        <div class="content-section">
+            <h3 style="color: #00d4ff; margin-bottom: 15px; font-size: 16px;">Nova Ordem de Serviço (OS)</h3>
+            
+            <div class="user-profile-header">
+                <div style="position: relative; overflow: visible;">
+                    <img id="header-func-foto" src="" alt="Foto" class="foto-perfil-header" onerror="this.src='https://via.placeholder.com/80?text=Sem+Foto';">
+                </div>
+                <div style="overflow: hidden;">
+                    <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; display: block;">Funcionário Logado:</span>
+                    <h4 id="header-func-nome" style="color: #00d4ff; font-size: 15px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Carregando...</h4>
+                    <span id="header-func-cargo" style="font-size: 12px; color: #cbd5e1;">Cargo / Setor</span>
+                </div>
+            </div>
+
+            <div class="form-row-3">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Descrição do Serviço / Falha Relatada</label>
+                    <textarea id="os-descricao" placeholder="Descreva detalhadamente o problema ou serviço a ser executado..."></textarea>
+                </div>
+            </div>
+
+            <div class="form-row-2">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Equipamento / Máquina</label>
+                    <input type="text" id="os-equipamento" placeholder="Ex: Sizer 1 / Trator 7230" style="margin-top: 5px;">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Ativo (Formato: 0000-00)</label>
+                    <input type="text" id="os-ativo" placeholder="Ex: 1234-56" maxlength="7" style="margin-top: 5px;">
+                </div>
+            </div>
+
+            <div class="form-row-2">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Prioridade (Obrigatório)</label>
+                    <div class="radio-group-container">
+                        <label class="radio-label"><input type="radio" name="os-prioridade" value="Baixa"> Baixa</label>
+                        <label class="radio-label"><input type="radio" name="os-prioridade" value="Média"> Média</label>
+                        <label class="radio-label"><input type="radio" name="os-prioridade" value="Alta"> Alta</label>
+                        <label class="radio-label"><input type="radio" name="os-prioridade" value="Urgente"> Urgente</label>
+                        <label class="radio-label" style="color: #f87171; font-weight: bold;"><input type="radio" name="os-prioridade" value="Parado/a"> Parado/a</label>
+                    </div>
+                </div>
+                <div></div>
+            </div>
+
+            <div class="form-row-3">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1;">Setor(es) Responsável(is) em Executar a Manutenção / Reparo</label>
+                    <div class="checkbox-group-container">
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Mecânica"> Mecânica</label>
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Elétrica"> Elétrica</label>
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Hidráulica"> Hidráulica</label>                        
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Construção"> Construção</label>
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Almoxarifado"> Almoxarifado</label>
+                        <label class="checkbox-label"><input type="checkbox" name="os-setor" value="Recursos Humanos"> Recursos Humanos</label>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="btn-salvar-os" class="btn-salvar" type="button">Abrir Ordem de Serviço</button>
+
+            <div style="margin-top: 25px; border-top: 1px solid #1e3a5f; padding-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h4 style="color: #00d4ff; font-size: 15px; margin: 0;">Ordens de Serviço da Empresa</h4>
+                    <button id="btn-atualizar-lista" onclick="carregarOS()" style="background: #1e3a5f; color: #38bdf8; border: 1px solid rgba(0,212,255,0.3); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s;" type="button">🔄 Atualizar Lista de OS</button>
+                </div>
+                <div id="lista-os-cards" class="cards-grid">
+                    <p style="color: #64748b; font-size: 13px;">Carregando ordens de serviço...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para perguntar Ajuda ao Finalizar OS -->
+    <div id="modal-ajuda">
+        <div class="modal-content">
+            <h3 style="color: #00d4ff; font-size: 16px; margin-bottom: 12px;">Finalização de Ordem de Serviço</h3>
+            <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 15px;">Houve ajuda de outros colaboradores nesta intervenção?</p>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button type="button" onclick="responderAjuda(true)" style="flex:1; background: #3b82f6; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">Sim</button>
+                <button type="button" onclick="responderAjuda(false)" style="flex:1; background: #334155; color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer;">Não</button>
+            </div>
+
+            <div id="container-qtd" style="display: none; margin-top: 10px;">
+                <label style="font-size: 12px; color: #cbd5e1; display: block; margin-bottom: 5px;">Quantos ajudantes participaram?</label>
+                <input type="number" id="input-qtd-ajudantes" min="1" max="10" value="1" onchange="gerarCamposMatriculas()" style="margin-bottom: 15px;">
+                
+                <div id="container-inputs-matriculas" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;"></div>
+                
+                <button type="button" onclick="confirmarFinalizacaoComAjuda()" class="btn-salvar">Confirmar e Finalizar OS</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://mswszxzeczyusnjccxit.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_-vY5LDwjwPB-BbFO1UCfQw_2ztUDsUp";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let timerInterval = null;
+        let osParaFinalizarId = null;
+
+        function formatarLinkImagem(url) {
+            if (!url) return '';
+            url = url.trim();
+            if (url.includes('drive.google.com')) {
+                let fileId = '';
+                const matchD = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                const matchId = url.match(/id=([a-zA-Z0-9_-]+)/);
+                if (matchD && matchD[1]) fileId = matchD[1];
+                else if (matchId && matchId[1]) fileId = matchId[1];
+                if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
+            }
+            return url;
+        }
+
+        function obterIdEmpresaAtiva() {
+            const empresaMasterId = localStorage.getItem('master_empresa_ativa_id');
+            if (empresaMasterId) return empresaMasterId;
+
+            try {
+                const usuarioStr = localStorage.getItem('pcm_usuario');
+                if (!usuarioStr) return null;
+                const usuario = JSON.parse(usuarioStr);
+                return usuario.id || usuario.idEmpresa || usuario.id_empresa || usuario.empresa_id || null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function obterDadosUsuarioLogado() {
+            try {
+                const usuarioStr = localStorage.getItem('pcm_usuario');
+                if (!usuarioStr) return { nome: 'Funcionário', setor: 'Geral', cargo: 'Operador' };
+                const usuario = JSON.parse(usuarioStr);
+                
+                let setorFormatado = usuario.setor || '';
+                if (!setorFormatado && usuario.cargo) {
+                    setorFormatado = usuario.cargo;
+                }
+                
+                return {
+                    nome: usuario.nome || 'Funcionário',
+                    setor: setorFormatado.replace(/^Setor:\s*/i, '').trim() || 'Geral',
+                    cargo: (usuario.cargo || '').toLowerCase()
+                };
+            } catch (e) {
+                return { nome: 'Funcionário', setor: 'Geral', cargo: 'Operador' };
+            }
+        }
+
+        function formatarTempo(segundos) {
+            const hrs = Math.floor(segundos / 3600);
+            const mins = Math.floor((segundos % 3600) / 60);
+            const secs = segundos % 60;
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            carregarCabecalhoEmpresa();
+            document.getElementById('btn-salvar-os').addEventListener('click', salvarOS);
+            
+            const inputAtivo = document.getElementById('os-ativo');
+            inputAtivo.addEventListener('input', (e) => {
+                let valor = e.target.value.replace(/\D/g, '');
+                if (valor.length > 6) valor = valor.slice(0, 6);
+                if (valor.length > 4) {
+                    e.target.value = valor.slice(0, 4) + '-' + valor.slice(4);
+                } else {
+                    e.target.value = valor;
+                }
+            });
+
+            carregarDadosSessao();
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(atualizarContadoresTela, 1000);
+        });
+
+        async function carregarCabecalhoEmpresa() {
+            const empresaId = obterIdEmpresaAtiva();
+            if (!empresaId) return;
+
+            try {
+                const { data: empresa, error } = await supabaseClient
+                    .from('empresas')
+                    .select('*')
+                    .eq('id', empresaId)
+                    .single();
+
+                if (error || !empresa) return;
+
+                const linkLogoBruto = empresa.link_imagem || empresa.foto || empresa.logo || '';
+                const logoEmpresa = formatarLinkImagem(linkLogoBruto);
+
+                const elLogo = document.getElementById('logado-empresa-logo');
+                const elPlaceholder = document.getElementById('logado-empresa-placeholder');
+
+                if (elLogo && logoEmpresa) {
+                    elLogo.src = logoEmpresa;
+                    elLogo.style.display = 'block';
+                    if (elPlaceholder) elPlaceholder.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("Erro ao carregar a logo da empresa:", err);
+            }
+        }
+
+        function atualizarContadoresTela() {
+            const cards = document.querySelectorAll('.os-card');
+            cards.forEach(card => {
+                const status = card.getAttribute('data-status');
+                if (status === 'Aberta' || status === 'Em Andamento') {
+                    const elExec = card.querySelector('.tempo-exec');
+                    if (elExec) {
+                        let sec = parseInt(elExec.getAttribute('data-seg') || '0') + 1;
+                        elExec.setAttribute('data-seg', sec);
+                        elExec.textContent = formatarTempo(sec);
+                    }
+                } else if (status === 'Pausada') {
+                    const elPausa = card.querySelector('.tempo-pausa');
+                    if (elPausa) {
+                        let sec = parseInt(elPausa.getAttribute('data-seg') || '0') + 1;
+                        elPausa.setAttribute('data-seg', sec);
+                        elPausa.textContent = formatarTempo(sec);
+                    }
+                }
+            });
+        }
+
+        function carregarDadosSessao() {
+            try {
+                const usuarioStr = localStorage.getItem('pcm_usuario');
+                if (!usuarioStr) {
+                    document.getElementById('header-func-nome').textContent = 'Master / Convidado';
+                    document.getElementById('header-func-cargo').textContent = 'Gestão Global';
+                    carregarOS();
+                    return;
+                }
+
+                const usuario = JSON.parse(usuarioStr);
+                const nomeFunc = usuario.nome || (usuario.cargo === 'master' ? 'Administrador Master' : 'Funcionário');
+                const cargoFunc = usuario.cargo || 'Operador';
+                const setorFunc = usuario.setor ? `Setor: ${usuario.setor}` : '';
+                const fotoFunc = formatarLinkImagem(usuario.link_imagem || '');
+
+                document.getElementById('header-func-nome').textContent = nomeFunc;
+                document.getElementById('header-func-cargo').textContent = `${cargoFunc} ${setorFunc}`;
+                
+                const imgEl = document.getElementById('header-func-foto');
+                if (fotoFunc) imgEl.src = fotoFunc;
+                else imgEl.src = 'https://via.placeholder.com/80?text=Foto';
+
+                carregarOS();
+            } catch (e) {
+                carregarOS();
+            }
+        }
+
+        async function carregarOS() {
+            const idEmpresa = obterIdEmpresaAtiva();
+            const container = document.getElementById('lista-os-cards');
+            container.innerHTML = '<p style="color: #64748b; font-size: 13px;">Carregando...</p>';
+
+            if (!idEmpresa) {
+                container.innerHTML = '<p style="color: #f87171; font-size: 13px;">Selecione uma empresa no Painel Master ou faça login.</p>';
+                return;
+            }
+
+            const usuarioAtual = obterDadosUsuarioLogado();
+            const setorUsuario = usuarioAtual.setor.toLowerCase();
+            const ehMaster = usuarioAtual.cargo.includes('master') || usuarioAtual.cargo.includes('administrador');
+            const ehAlmoxarifado = setorUsuario.includes('almoxarifado');
+
+            try {
+                let query = supabaseClient.from('ordens_servico').select('*').eq('empresa_id', idEmpresa);
+                let { data: ordens, error } = await query;
+                
+                if (error) {
+                    const altQuery = await supabaseClient.from('ordens_servico').select('*').eq('id_empresa', idEmpresa);
+                    ordens = altQuery.data;
+                    error = altQuery.error;
+                }
+
+                if (error) throw error;
+                container.innerHTML = '';
+                
+                const ordensAtivas = ordens ? ordens.filter(os => {
+                    if ((os.status || 'Aberta') === 'Concluída') return false;
+                    if (ehMaster || ehAlmoxarifado) return true;
+
+                    const setoresOS = (os.setores || '').toLowerCase();
+                    return setorUsuario && setoresOS.includes(setorUsuario);
+                }) : [];
+
+                if (ordensAtivas.length === 0) {
+                    container.innerHTML = '<p style="color: #64748b; font-size: 13px;">Nenhuma Ordem de Serviço pendente ou visível para o seu setor.</p>';
+                    return;
+                }
+
+                const pesosPrioridade = { 'Parado/a': 1, 'Urgente': 2, 'Alta': 3, 'Média': 4, 'Baixa': 5 };
+                ordensAtivas.sort((a, b) => {
+                    const pesoA = pesosPrioridade[a.prioridade] || 6;
+                    const pesoB = pesosPrioridade[b.prioridade] || 6;
+                    if (pesoA !== pesoB) return pesoA - pesoB;
+                    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                });
+
+                ordensAtivas.forEach((os) => {
+                    const status = os.status || 'Aberta';
+                    const aberta = status === 'Aberta';
+                    const pausada = status === 'Pausada';
+                    const emAndamento = status === 'Em Andamento';
+
+                    const setoresOS = (os.setores || '').toLowerCase();
+                    const setorCorresponde = setorUsuario && setoresOS.includes(setorUsuario);
+                    const podeLiberarChave = ehAlmoxarifado || setorCorresponde || ehMaster;
+
+                    let corPrioridade = '#38bdf8';
+                    let bgPrioridade = 'transparent';
+                    let isParado = os.prioridade === 'Parado/a' || os.prioridade === 'Urgente';
+
+                    if (isParado) { corPrioridade = '#f87171'; bgPrioridade = 'rgba(248, 113, 113, 0.15);'; }
+                    else if (os.prioridade === 'Alta') { corPrioridade = '#fbbf24'; bgPrioridade = 'rgba(251, 191, 36, 0.15);'; }
+
+                    const autorTexto = `${os.funcionario || 'Desconhecido'} (${os.funcionario_setor || 'Geral'})`;
+                    const executorTexto = os.executor ? `${os.executor} (${os.executor_setor || 'Geral'})` : 'Aguardando...';
+
+                    let htmlPecas = '';
+                    if (os.pecas && os.pecas.trim() !== '') {
+                        htmlPecas = `<div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <strong style="font-size:11px; color:#38bdf8;">Peças Solicitadas:</strong>
+                                <span style="font-size:11px; font-weight:600; color:${os.numero_chave ? '#34d399' : '#fbbf24'};">
+                                    🔑 Chave: ${os.numero_chave || 'Aguardando liberação'}
+                                </span>
+                            </div>
+                            <p style="font-size: 12px; color: #f1f5f9; margin-top: 4px; white-space: pre-line;">${os.pecas}</p>
+                        </div>`;
+                    }
+
+                    let htmlAjudantes = '';
+                    if (os.ajudantes && os.ajudantes.trim() !== '') {
+                        htmlAjudantes = `<div style="margin-top: 6px; font-size: 11px; color: #34d399; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px;">
+                            <strong>👥 Ajudantes/Auxiliares:</strong> ${os.ajudantes}
+                        </div>`;
+                    }
+
+                    let htmlMotivoPausa = '';
+                    if (os.motivo_pausa && os.motivo_pausa.trim() !== '') {
+                        htmlMotivoPausa = `<div style="margin-top: 6px; font-size: 11px; color: #facc15; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px;">
+                            <strong>⏸ Motivo da Pausa:</strong> ${os.motivo_pausa}
+                        </div>`;
+                    }
+
+                    const card = document.createElement('div');
+                    let classeCard = 'aberta';
+                    if (emAndamento) classeCard = 'andamento';
+                    if (pausada) classeCard = 'pausada';
+                    let classePiscar = isParado ? ' card-piscando' : '';
+                    
+                    card.className = `os-card ${classeCard}${classePiscar}`;
+                    card.setAttribute('data-status', status);
+                    card.setAttribute('data-id', os.id);
+                    
+                    let botoesAcao = '';
+                    if (aberta) {
+                        botoesAcao = `
+                            <button class="btn-acao btn-acao-iniciar" type="button" onclick="iniciarOS('${os.id}')">▶ INICIAR</button>
+                            <button class="btn-acao btn-acao-pecas" type="button" onclick="gerenciarPecas('${os.id}', '${os.pecas || ''}')">📦 Solicitar Peças</button>
+                            ${podeLiberarChave ? `<button class="btn-acao btn-acao-chave" type="button" onclick="informarChave('${os.id}', '${os.numero_chave || ''}')">🔑 Liberar Chave</button>` : ''}
+                        `;
+                    } else if (emAndamento) {
+                        botoesAcao = `
+                            <button class="btn-acao btn-acao-pausar" type="button" onclick="pausarOS('${os.id}')">⏸ Pausar</button>
+                            <button class="btn-acao btn-acao-finalizar" type="button" onclick="abrirModalFinalizar('${os.id}')">✔️ Finalizar</button>
+                            <button class="btn-acao btn-acao-pecas" type="button" onclick="gerenciarPecas('${os.id}', '${os.pecas || ''}')">📦 Solicitar Peças</button>
+                            ${podeLiberarChave ? `<button class="btn-acao btn-acao-chave" type="button" onclick="informarChave('${os.id}', '${os.numero_chave || ''}')">🔑 Liberar Chave</button>` : ''}
+                        `;
+                    } else if (pausada) {
+                        botoesAcao = `
+                            <button class="btn-acao btn-acao-reiniciar" type="button" onclick="retomarOS('${os.id}')">▶ Reiniciar (Retomar)</button>
+                            <button class="btn-acao btn-acao-pecas" type="button" onclick="gerenciarPecas('${os.id}', '${os.pecas || ''}')">📦 Solicitar Peças</button>
+                            ${podeLiberarChave ? `<button class="btn-acao btn-acao-chave" type="button" onclick="informarChave('${os.id}', '${os.numero_chave || ''}')">🔑 Liberar Chave</button>` : ''}
+                        `;
+                    }
+
+                    let segExec = os.tempo_execucao_segundos || 0;
+                    if (os.created_at) {
+                        const segundosDesdeCriacao = Math.floor((new Date() - new Date(os.created_at)) / 1000);
+                        if (segundosDesdeCriacao > segExec) segExec = segundosDesdeCriacao;
+                    }
+                    const segPausa = os.tempo_pausa_segundos || 0;
+
+                    card.innerHTML = `
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                                <div style="font-size: 11px; color: #cbd5e1; display: flex; gap: 10px;">
+                                    <span>⏱️ Exec: <strong class="tempo-exec" data-seg="${segExec}">${formatarTempo(segExec)}</strong></span>
+                                    <span>⏸️ Pausa: <strong class="tempo-pausa" data-seg="${segPausa}">${formatarTempo(segPausa)}</strong></span>
+                                </div>
+                                <span style="font-size:12px; padding:3px 12px; border-radius:4px; font-weight:bold; background:${aberta ? '#ef4444' : (pausada ? '#f59e0b' : '#10b981')}; color:#fff;">
+                                    ${status}
+                                </span>
+                            </div>
+
+                            <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; padding: 12px; margin-bottom: 10px;">
+                                <p style="color: #fff; font-size: 15px; font-weight: 800; line-height: 1.4; margin-bottom: 8px;">📝 ${os.descricao}</p>
+                                <p style="color: #e2e8f0; font-size: 13px; margin-bottom: 3px;"><strong>Equipamento / Máquina:</strong> ${os.equipamento}</p>
+                                ${os.ativo ? `<p style="color: #e2e8f0; font-size: 13px; margin-bottom: 3px;"><strong>Ativo:</strong> ${os.ativo}</p>` : ''}
+                                <p style="color: #e2e8f0; font-size: 13px; margin-top: 6px; display: inline-block; padding: 2px 6px; border-radius: 4px; background: ${bgPrioridade};">
+                                    <strong>Prioridade:</strong> <span style="color:${corPrioridade}; font-weight:900; text-transform: uppercase;">${os.prioridade}</span>
+                                </p>
+                            </div>
+
+                            <div style="font-size: 11px; color: #cbd5e1; display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px;">
+                                <span>👤 Aberta por: <strong>${autorTexto}</strong></span>
+                                <span>🛠️ Executor Principal: <strong style="color: #fde047;">${executorTexto}</strong></span>
+                            </div>
+                            ${htmlMotivoPausa}
+                            ${htmlAjudantes}
+                            ${htmlPecas}
+                        </div>
+
+                        <div class="card-actions">
+                            ${botoesAcao}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (erro) {
+                container.innerHTML = `<p style="color: #ef4444; font-size: 13px;">Erro ao carregar do Supabase: ${erro.message || 'Erro desconhecido'}</p>`;
+            }
+        }
+
+        window.iniciarOS = async function(id) {
+            const usuario = obterDadosUsuarioLogado();
+            const cardEl = document.querySelector(`.os-card[data-id="${id}"]`);
+            const elExec = cardEl ? cardEl.querySelector('.tempo-exec') : null;
+            const segAtual = elExec ? parseInt(elExec.getAttribute('data-seg') || '0') : 0;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('ordens_servico')
+                    .update({ 
+                        status: 'Em Andamento',
+                        executor: usuario.nome,
+                        executor_setor: usuario.setor,
+                        tempo_execucao_segundos: segAtual
+                    })
+                    .eq('id', id);
+
+                if (error) throw error;
+                carregarOS();
+            } catch (erro) {
+                alert('Erro ao iniciar OS: ' + erro.message);
+            }
+        };
+
+        window.pausarOS = async function(id) {
+            let motivo = prompt("Informe obrigatoriamente o motivo da pausa (ex: Aguardando peça):", "");
+            while (motivo !== null && motivo.trim() === "") {
+                alert("O preenchimento do motivo da pausa é obrigatório!");
+                motivo = prompt("Informe obrigatoriamente o motivo da pausa (ex: Aguardando peça):", "");
+            }
+            if (motivo === null) return;
+
+            const cardEl = document.querySelector(`.os-card[data-id="${id}"]`);
+            const elExec = cardEl ? cardEl.querySelector('.tempo-exec') : null;
+            const segAtual = elExec ? parseInt(elExec.getAttribute('data-seg') || '0') : 0;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('ordens_servico')
+                    .update({ status: 'Pausada', motivo_pausa: motivo.trim(), tempo_execucao_segundos: segAtual })
+                    .eq('id', id);
+
+                if (error) throw error;
+                carregarOS();
+            } catch (erro) {
+                alert('Erro ao pausar OS: ' + erro.message);
+            }
+        };
+
+        window.retomarOS = async function(id) {
+            const cardEl = document.querySelector(`.os-card[data-id="${id}"]`);
+            const elPausa = cardEl ? cardEl.querySelector('.tempo-pausa') : null;
+            const pausaAtual = elPausa ? parseInt(elPausa.getAttribute('data-seg') || '0') : 0;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('ordens_servico')
+                    .update({ status: 'Em Andamento', tempo_pausa_segundos: pausaAtual })
+                    .eq('id', id);
+
+                if (error) throw error;
+                carregarOS();
+            } catch (erro) {
+                alert('Erro ao retomar OS: ' + erro.message);
+            }
+        };
+
+        window.abrirModalFinalizar = function(id) {
+            osParaFinalizarId = id;
+            document.getElementById('input-qtd-ajudantes').value = "1";
+            document.getElementById('container-inputs-matriculas').innerHTML = '';
+            document.getElementById('container-qtd').style.display = 'none';
+            document.getElementById('modal-ajuda').style.display = 'flex';
+        };
+
+        window.responderAjuda = function(teveAjuda) {
+            if (teveAjuda) {
+                document.getElementById('container-qtd').style.display = 'block';
+                gerarCamposMatriculas();
+            } else {
+                finalizarOSNoBanco(osParaFinalizarId, '');
+            }
+        };
+
+        window.gerenarCamposMatriculas = function() {} // compatibilidade
+
+        function gerarCamposMatriculas() {
+            const qtd = parseInt(document.getElementById('input-qtd-ajudantes').value) || 1;
+            const container = document.getElementById('container-inputs-matriculas');
+            container.innerHTML = '';
+
+            for (let i = 1; i <= qtd; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'input-ajudante-individual';
+                input.placeholder = `Matrícula ou Nome do Ajudante ${i}`;
+                container.appendChild(input);
+            }
+        }
+
+        window.confirmarFinalizacaoComAjuda = function() {
+            const inputs = document.querySelectorAll('.input-ajudante-individual');
+            const ajudantesList = [];
+
+            inputs.forEach(input => {
+                const val = input.value.trim();
+                if (val) ajudantesList.push(val);
+            });
+
+            if (ajudantesList.length === 0) {
+                alert('Preencha a matrícula ou nome de pelo menos um ajudante!');
+                return;
+            }
+
+            finalizarOSNoBanco(osParaFinalizarId, ajudantesList.join(', '));
+        };
+
+        async function finalizarOSNoBanco(id, ajudantesTexto) {
+            document.getElementById('modal-ajuda').style.display = 'none';
+            const cardEl = document.querySelector(`.os-card[data-id="${id}"]`);
+            const elExec = cardEl ? cardEl.querySelector('.tempo-exec') : null;
+            const elPausa = cardEl ? cardEl.querySelector('.tempo-pausa') : null;
+
+            const segundosExecFinais = elExec ? parseInt(elExec.getAttribute('data-seg') || '0') : 0;
+            const segundosPausaFinais = elPausa ? parseInt(elPausa.getAttribute('data-seg') || '0') : 0;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('ordens_servico')
+                    .update({ 
+                        status: 'Concluída',
+                        tempo_execucao_segundos: segundosExecFinais,
+                        tempo_pausa_segundos: segundosPausaFinais,
+                        ajudantes: ajudantesTexto
+                    })
+                    .eq('id', id);
+
+                if (error) throw error;
+                alert('Ordem de Serviço finalizada com sucesso!');
+                carregarOS();
+            } catch (erro) {
+                alert('Erro ao finalizar OS: ' + erro.message);
+            }
+        }
+
+        window.gerenciarPecas = async function(id, pecasAtuais) {
+            const qtd = prompt(`Quantidade necessária (Ex: 2):`, "1");
+            if (qtd === null) return;
+            const item = prompt(`Nome da Peça ou Material (Ex: Rolamento):`, "");
+            if (item === null || item.trim() === '') return;
+
+            const novaSolicitacao = `${qtd} und / ${item.trim()}`;
+            const pecasFinais = pecasAtuais ? `${pecasAtuais}\n${novaSolicitacao}` : novaSolicitacao;
+
+            try {
+                const { error } = await supabaseClient.from('ordens_servico').update({ pecas: pecasFinais }).eq('id', id);
+                if (error) throw error;
+                alert('Peça solicitada com sucesso!');
+                carregarOS();
+            } catch (erro) {
+                alert('Erro ao solicitar peça: ' + erro.message);
+            }
+        };
+
+        window.informarChave = async function(id, chaveAtual) {
+            const novaChave = prompt(`Digite o Número da Chave para liberação:`, chaveAtual);
+            if (novaChave === null) return;
+
+            try {
+                const { error } = await supabaseClient.from('ordens_servico').update({ numero_chave: novaChave.trim() }).eq('id', id);
+                if (error) throw error;
+                alert('Chave liberada com sucesso!');
+                carregarOS();
+            } catch (erro) {
+                alert('Erro ao liberar chave: ' + erro.message);
+            }
+        };
+
+        async function salvarOS() {
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) { alert('Sessão expirada.'); window.location.href = 'index.html'; return; }
+
+            const usuario = obterDadosUsuarioLogado();
+            const descricao = document.getElementById('os-descricao').value.trim();
+            const equipamento = document.getElementById('os-equipamento').value.trim();
+            const ativo = document.getElementById('os-ativo').value.trim();
+            const prioridadeSelecionada = document.querySelector('input[name="os-prioridade"]:checked');
+            
+            if(!descricao || !equipamento) { alert('Preencha Descrição e Equipamento!'); return; }
+            if(!ativo || !/^\d{4}-\d{2}$/.test(ativo)) { alert('Ativo obrigatório no formato 0000-00!'); return; }
+            if(!prioridadeSelecionada) { alert('Selecione a prioridade!'); return; }
+
+            const setores = [];
+            document.querySelectorAll('input[name="os-setor"]:checked').forEach(cb => setores.push(cb.value));
+            if(setores.length === 0) { alert('Selecione pelo menos um setor responsável!'); return; }
+
+            const dadosOS = {
+                empresa_id: idEmpresa,
+                funcionario: usuario.nome,
+                funcionario_setor: usuario.setor,
+                descricao: descricao,
+                equipamento: equipamento,
+                ativo: ativo,
+                prioridade: prioridadeSelecionada.value,
+                setores: setores.join(', '),
+                status: 'Aberta',
+                pecas: '',
+                ajudantes: '',
+                tempo_execucao_segundos: 0,
+                tempo_pausa_segundos: 0,
+                motivo_pausa: ''
+            };
+
+            try {
+                let { error } = await supabaseClient.from('ordens_servico').insert([dadosOS]);
+                if (error && error.message && error.message.includes('empresa_id')) {
+                    delete dadosOS.empresa_id;
+                    dadosOS.id_empresa = idEmpresa;
+                    const altRes = await supabaseClient.from('ordens_servico').insert([dadosOS]);
+                    error = altRes.error;
+                }
+                if (error) throw error;
+
+                alert('Ordem de Serviço aberta com sucesso!');
+                document.getElementById('os-descricao').value = '';
+                document.getElementById('os-equipamento').value = '';
+                document.getElementById('os-ativo').value = '';
+                document.querySelectorAll('input[name="os-setor"]').forEach(cb => cb.checked = false);
+                document.querySelectorAll('input[name="os-prioridade"]').forEach(rb => rb.checked = false);
+                carregarOS();
+            } catch (erro) {
+                alert('Erro ao salvar OS: ' + erro.message);
+            }
+        }
+    </script>
+</body>
+</html>

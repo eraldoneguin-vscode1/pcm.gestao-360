@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM360 - Dashboard de Combustível</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #051622;
+            background-image: linear-gradient(rgba(5, 22, 34, 0.8), rgba(5, 22, 34, 0.9)), url('fundo.png');
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            color: #ffffff; min-height: 100vh; padding: 20px;
+        }
+        .container { max-width: 1100px; margin: 0 auto; background: rgba(8, 30, 48, 0.95); border-radius: 12px; border: 1px solid rgba(249, 115, 22, 0.4); padding: 25px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3a5f; padding-bottom: 15px; margin-bottom: 25px; flex-wrap: wrap; gap: 10px; }
+        .header h2 { color: #f97316; font-size: 20px; display: flex; align-items: center; gap: 10px; font-weight: bold; }
+        .btn-voltar { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s; }
+        .btn-voltar:hover { background: #475569; }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .kpi-card { background: rgba(2, 12, 20, 0.8); border: 1px solid #1e3a5f; border-left: 4px solid #f97316; border-radius: 8px; padding: 18px; }
+        .kpi-title { font-size: 12px; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-bottom: 5px; }
+        .kpi-value { font-size: 24px; color: #ffffff; font-weight: bold; }
+
+        .table-container { background: rgba(2, 12, 20, 0.7); border: 1px solid #1e3a5f; border-radius: 8px; overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th { background: rgba(15, 23, 42, 0.9); color: #f97316; padding: 12px 15px; border-bottom: 1px solid #1e3a5f; font-weight: 600; }
+        td { padding: 12px 15px; border-bottom: 1px solid rgba(30, 58, 95, 0.4); color: #cbd5e1; }
+        tr:hover { background: rgba(30, 58, 95, 0.2); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h2>📈 Dashboard de Consumo de Combustível</h2>
+            <button id="btnVoltarPainel" class="btn-voltar" type="button">⬅ Voltar ao Painel</button>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-title">Total Abastecido (Litros)</div>
+                <div id="kpi-total-litros" class="kpi-value">0 L</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #10b981;">
+                <div class="kpi-title">Custo Total (R$)</div>
+                <div id="kpi-total-custo" class="kpi-value">R$ 0,00</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #38bdf8;">
+                <div class="kpi-title">Total de Registos</div>
+                <div id="kpi-total-registos" class="kpi-value">0</div>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 15px;">
+            <h3 style="color: #38bdf8; font-size: 16px; font-weight: bold;">Últimos Abastecimentos Registados</h3>
+            <button onclick="carregarDadosDashboard()" style="background: #1e3a5f; color: #38bdf8; border: 1px solid #f97316; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">🔄 Atualizar Dados</button>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data / Hora</th>
+                        <th>Máquina / Ativo</th>
+                        <th>Operador</th>
+                        <th>Combustível</th>
+                        <th>Litros</th>
+                        <th>Horímetro/KM</th>
+                        <th>Custo Total</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaAbastecimentosBody">
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">A carregar registos...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://mswszxzeczyusnjccxit.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_-vY5LDwjwPB-BbFO1UCfQw_2ztUDsUp";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function obterIdEmpresaAtiva() {
+            return localStorage.getItem('master_empresa_ativa_id') || (() => {
+                try {
+                    const u = JSON.parse(localStorage.getItem('pcm_usuario'));
+                    return u?.idEmpresa || u?.id_empresa || u?.empresa_id || null;
+                } catch(e) { return null; }
+            })();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('btnVoltarPainel').addEventListener('click', () => {
+                window.location.href = '0painel-master.html';
+            });
+            carregarDadosDashboard();
+        });
+
+        async function carregarDadosDashboard() {
+            const idEmpresa = obterIdEmpresaAtiva();
+            const tbody = document.getElementById('tabelaAbastecimentosBody');
+            
+            if (!idEmpresa) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #f87171; padding: 20px;">Nenhuma empresa ativa selecionada.</td></tr>';
+                return;
+            }
+
+            try {
+                const { data: abastecimentos, error } = await supabaseClient
+                    .from('abastecimentos')
+                    .select('*')
+                    .eq('id_empresa', idEmpresa)
+                    .order('data_registo', { ascending: false });
+
+                if (error) throw error;
+
+                let somaLitros = 0;
+                let somaCusto = 0;
+                let totalRegs = abastecimentos ? abastecimentos.length : 0;
+
+                tbody.innerHTML = '';
+
+                if (abastecimentos && totalRegs > 0) {
+                    abastecimentos.forEach(item => {
+                        somaLitros += parseFloat(item.litros || 0);
+                        somaCusto += parseFloat(item.custo_total || 0);
+
+                        const dataFormatada = item.data_registo ? new Date(item.data_registo).toLocaleString('pt-BR') : 'N/D';
+                        
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${dataFormatada}</td>
+                            <td style="color: #f97316; font-weight: bold;">${item.ativo || 'N/D'}</td>
+                            <td>${item.operador || 'N/D'}</td>
+                            <td>${item.tipo_combustivel || 'N/D'}</td>
+                            <td>${parseFloat(item.litros || 0).toLocaleString('pt-BR')} L</td>
+                            <td>${item.horimetro || 'N/D'}</td>
+                            <td>R$ ${parseFloat(item.custo_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">Nenhum registo de abastecimento encontrado.</td></tr>';
+                }
+
+                document.getElementById('kpi-total-litros').textContent = somaLitros.toLocaleString('pt-BR') + ' L';
+                document.getElementById('kpi-total-custo').textContent = 'R$ ' + somaCusto.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                document.getElementById('kpi-total-registos').textContent = totalRegs;
+
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #f87171; padding: 20px;">Erro ao carregar dados: ${err.message}</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>

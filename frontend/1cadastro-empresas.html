@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM360 — Cadastro de Empresas</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background-color: #051622;
+            background-image: linear-gradient(rgba(5, 22, 34, 0.75), rgba(5, 22, 34, 0.85)), url('fundo.png');
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            color: #ffffff; min-height: 100vh; padding: 15px;
+        }
+        .container { max-width: 900px; margin: 0 auto; background: rgba(8, 30, 48, 0.9); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3); padding: 25px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3a5f; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .header h2 { color: #00d4ff; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        .btn-voltar { background: #991b1b; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s; }
+        .btn-voltar:hover { background: #b91c1c; }
+        .content-section { background: rgba(2, 12, 20, 0.6); padding: 20px; border-radius: 8px; border: 1px solid #1e3a5f; margin-bottom: 20px; }
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        
+        label { font-size: 12px; color: #cbd5e1; font-weight: 500; display: block; margin-bottom: 5px; }
+        input { 
+            width: 100%; padding: 10px; background: rgba(2, 12, 20, 0.8); 
+            border: 1px solid #1e3a5f; border-radius: 6px; color: #fff; font-size: 14px; 
+        }
+        input:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 8px rgba(0, 212, 255, 0.4); }
+        
+        .btn-salvar { background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; margin-top: 5px; transition: opacity 0.2s; }
+        .btn-salvar:hover { opacity: 0.9; }
+        .btn-salvar:disabled { background: #64748b; cursor: not-allowed; }
+
+        .empresas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+        .empresa-card { background: rgba(4, 18, 30, 0.9); border: 1px solid #1e3a5f; border-radius: 8px; padding: 15px; border-left: 4px solid #10b981; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        .foto-empresa-zoom {
+            width: 48px; height: 48px; border-radius: 8px; object-fit: cover; border: 1px solid #10b981; background: #020c14;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
+        }
+        .foto-empresa-zoom:hover { transform: scale(2.2); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h2>🏢 PCM360 — Cadastro de Empresas</h2>
+            <button id="btnVoltarPainel" class="btn-voltar" type="button">🚪 Sair / Login</button>
+        </div>
+
+        <div class="content-section">
+            <h3 style="color: #38bdf8; margin-bottom: 15px; font-size: 16px;">Cadastrar Nova Empresa</h3>
+            
+            <div class="form-row">
+                <div>
+                    <label>Razão Social / Nome da Empresa</label>
+                    <input type="text" id="emp-nome" placeholder="Ex: Agropecuária Exemplo Ltda">
+                </div>
+                <div>
+                    <label>CNPJ</label>
+                    <input type="text" id="emp-cnpj" maxlength="18" placeholder="Ex: 00.000.000/0001-00">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label>Cidade</label>
+                    <input type="text" id="emp-cidade" placeholder="Ex: Floriano">
+                </div>
+                <div>
+                    <label>Estado (UF)</label>
+                    <input type="text" id="emp-estado" maxlength="2" placeholder="Ex: PI" style="text-transform: uppercase;">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label>Limite de Licenças / IDs</label>
+                    <input type="number" id="emp-limite" min="1" value="10" placeholder="Ex: 20">
+                </div>
+                <div>
+                    <label>Link da Logo (Google Drive ou Imagem)</label>
+                    <input type="text" id="emp-logo" placeholder="Cole o link da logo aqui" style="text-transform: none;">
+                </div>
+            </div>
+            
+            <button id="btn-salvar-empresa" class="btn-salvar" type="button">Salvar Empresa na Base</button>
+        </div>
+
+        <div class="content-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="color: #38bdf8; font-size: 16px;">Empresas Cadastradas</h3>
+                <button onclick="carregarEmpresas()" style="background: #1e3a5f; color: #38bdf8; border: 1px solid #00d4ff; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">🔄 Atualizar Lista</button>
+            </div>
+            
+            <div id="loadingEmpresas" style="text-align: center; color: #94a3b8; font-size: 13px; padding: 20px;">Carregando empresas...</div>
+            <div id="gridEmpresas" class="empresas-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://mswszxzeczyusnjccxit.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_-vY5LDwjwPB-BbFO1UCfQw_2ztUDsUp";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function formatarLinkImagem(url) {
+            if (!url) return '';
+            url = url.trim();
+            if (url.includes('drive.google.com')) {
+                let fileId = '';
+                const matchD = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                const matchId = url.match(/id=([a-zA-Z0-9_-]+)/);
+                if (matchD && matchD[1]) fileId = matchD[1];
+                else if (matchId && matchId[1]) fileId = matchId[1];
+                if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
+            }
+            return url;
+        }
+
+        function aplicarMascaraCNPJ(e) {
+            let v = e.target.value.replace(/\D/g, '');
+            if (v.length > 14) v = v.substring(0, 14);
+            
+            if (v.length > 12) {
+                v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2}).*/, '$1.$2.$3/$4-$5');
+            } else if (v.length > 8) {
+                v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4}).*/, '$1.$2.$3/$4');
+            } else if (v.length > 5) {
+                v = v.replace(/^(\d{2})(\d{3})(\d{1,3}).*/, '$1.$2.$3');
+            } else if (v.length > 2) {
+                v = v.replace(/^(\d{2})(\d{1,3}).*/, '$1.$2');
+            }
+            e.target.value = v;
+        }
+
+        function gerarCredenciaisEmpresa(nome) {
+            const limpo = nome.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 6);
+            const randomNum = Math.floor(100 + Math.random() * 900);
+            return {
+                usuario: `emp_${limpo}${randomNum}`,
+                senha: Math.random().toString(36).substring(2, 10)
+            };
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const btnVoltar = document.getElementById('btnVoltarPainel');
+            if (btnVoltar) {
+                btnVoltar.addEventListener('click', () => {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    window.location.href = 'index.html';
+                });
+            }
+
+            const inputCnpj = document.getElementById('emp-cnpj');
+            if (inputCnpj) {
+                inputCnpj.addEventListener('input', aplicarMascaraCNPJ);
+            }
+
+            document.getElementById('btn-salvar-empresa').addEventListener('click', salvarEmpresa);
+            carregarEmpresas();
+        });
+
+        async function salvarEmpresa() {
+            const nome = document.getElementById('emp-nome').value.trim();
+            const cnpj = document.getElementById('emp-cnpj').value.trim();
+            const cidade = document.getElementById('emp-cidade').value.trim();
+            const estado = document.getElementById('emp-estado').value.trim().toUpperCase();
+            const limite = parseInt(document.getElementById('emp-limite').value) || 10;
+            const logoBruta = document.getElementById('emp-logo').value.trim();
+            const logo = formatarLinkImagem(logoBruta);
+
+            if (!nome) {
+                alert('❌ Preencha o nome / razão social da empresa!');
+                return;
+            }
+
+            const btnSalvar = document.getElementById('btn-salvar-empresa');
+            btnSalvar.disabled = true;
+            btnSalvar.textContent = 'Salvando...';
+
+            try {
+                const credenciais = gerarCredenciaisEmpresa(nome);
+
+                const { error } = await supabaseClient
+                    .from('empresas')
+                    .insert([{
+                        nome_empresa: nome,
+                        cnpj: cnpj,
+                        cidade: cidade,
+                        estado: estado,
+                        limite_ids: limite,
+                        link_imagem: logo,
+                        usuario: credenciais.usuario,
+                        senha: credenciais.senha,
+                        status: 'Ativo'
+                    }]);
+
+                if (error) throw error;
+
+                alert(`✅ Empresa cadastrada com sucesso!\n\n🔑 Credenciais Provisórias Geradas:\nUsuário: ${credenciais.usuario}\nSenha: ${credenciais.senha}`);
+                
+                document.getElementById('emp-nome').value = '';
+                document.getElementById('emp-cnpj').value = '';
+                document.getElementById('emp-cidade').value = '';
+                document.getElementById('emp-estado').value = '';
+                document.getElementById('emp-logo').value = '';
+                carregarEmpresas();
+            } catch (err) {
+                alert('❌ Erro ao cadastrar empresa: ' + err.message);
+            } finally {
+                btnSalvar.disabled = false;
+                btnSalvar.textContent = 'Salvar Empresa na Base';
+            }
+        }
+
+        async function carregarEmpresas() {
+            const grid = document.getElementById('gridEmpresas');
+            const loading = document.getElementById('loadingEmpresas');
+            loading.style.display = 'block';
+            grid.innerHTML = '';
+
+            try {
+                const { data: empresas, error } = await supabaseClient
+                    .from('empresas')
+                    .select('*')
+                    .order('nome_empresa', { ascending: true });
+
+                if (error) throw error;
+
+                loading.style.display = 'none';
+
+                if (empresas && empresas.length > 0) {
+                    empresas.forEach(emp => {
+                        const card = document.createElement('div');
+                        card.className = 'empresa-card';
+
+                        const fotoSrc = formatarLinkImagem(emp.link_imagem || emp.foto || emp.logo || '');
+                        const imgTag = fotoSrc 
+                            ? `<img src="${fotoSrc}" alt="Logo" class="foto-empresa-zoom" onerror="this.src='https://via.placeholder.com/80?text=Logo';">`
+                            : `<div class="foto-empresa-zoom flex items-center justify-center text-[10px] text-emerald-400 font-bold bg-slate-900">LOGO</div>`;
+
+                        const limiteIdsVal = emp.limite_ids || emp.ids_liberados || 10;
+                        const nomeEmp = emp.nome_empresa || emp.razao_social || 'Empresa';
+                        const statusEmp = emp.status || 'Ativo';
+                        const isPausado = statusEmp === 'Pausado';
+
+                        card.style.borderLeftColor = isPausado ? '#f43f5e' : '#10b981';
+
+                        card.innerHTML = `
+                            <div>
+                                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                                    ${imgTag}
+                                    <div style="overflow: hidden; flex: 1;">
+                                        <h4 style="color: ${isPausado ? '#f43f5e' : '#10b981'}; font-size: 15px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${nomeEmp}">${nomeEmp} ${isPausado ? '(PAUSADA)' : ''}</h4>
+                                        <p style="font-size: 11px; color: #cbd5e1;"><strong>CNPJ:</strong> ${emp.cnpj || '---'}</p>
+                                    </div>
+                                </div>
+                                <div style="font-size: 12px; color: #94a3b8; margin-bottom: 4px;"><strong>Local:</strong> ${emp.cidade || '---'} / ${emp.estado || '---'}</div>
+                                <div style="font-size: 12px; color: #38bdf8; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span><strong>IDs / Licenças:</strong> ${limiteIdsVal}</span>
+                                    <button onclick="editarLimiteIds('${emp.id}', ${limiteIdsVal})" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;">✏️ Editar</button>
+                                </div>
+                                <div style="background: rgba(2, 12, 20, 0.6); padding: 8px; border-radius: 6px; border: 1px solid rgba(0,212,255,0.15); margin-bottom: 12px;">
+                                    <div style="font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                        <span>Usuário: <strong style="color: #ffffff;">${emp.usuario || 'N/A'}</strong></span>
+                                        <button onclick="editarCredencialEmpresa('${emp.id}', 'usuario', '${emp.usuario || ''}')" style="background: #334155; color: #38bdf8; border: none; padding: 2px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold;">Editar Usuário</button>
+                                    </div>
+                                    <div style="font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center;">
+                                        <span>Senha: <strong style="color: #fbbf24;">${emp.senha || 'N/A'}</strong></span>
+                                        <button onclick="editarCredencialEmpresa('${emp.id}', 'senha', '${emp.senha || ''}')" style="background: #334155; color: #fbbf24; border: none; padding: 2px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold;">Editar Senha</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <div style="display: flex; gap: 6px;">
+                                    <button onclick="alternarStatusEmpresa('${emp.id}', '${statusEmp}')" style="flex: 1; background: ${isPausado ? '#10b981' : '#f43f5e'}; color: white; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; text-align: center;">
+                                        ${isPausado ? '▶️ Ativar' : '⏸️ Pausar'}
+                                    </button>
+                                    <button onclick="excluirEmpresa('${emp.id}', '${nomeEmp}')" style="flex: 1; background: #991b1b; color: white; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; text-align: center;">
+                                        🗑️ Excluir
+                                    </button>
+                                </div>
+                                <button onclick="selecionarEmpresaMaster('${emp.id}', '${nomeEmp}')" style="width: 100%; background: #10b981; color: white; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; text-align: center;">Gerenciar Empresa ➔</button>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                } else {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #64748b; font-size: 13px; padding: 15px;">Nenhuma empresa cadastrada.</div>';
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #f87171; font-size: 13px; padding: 15px;">Erro ao carregar empresas: ${err.message}</div>`;
+            }
+        }
+
+        async function alternarStatusEmpresa(idEmpresa, statusAtual) {
+            const novoStatus = statusAtual === 'Pausado' ? 'Ativo' : 'Pausado';
+            const acaoStr = novoStatus === 'Pausado' ? 'pausar' : 'ativar';
+
+            if (!confirm(`Tem certeza que deseja ${acaoStr} o acesso de toda esta empresa?`)) return;
+
+            try {
+                const { error } = await supabaseClient.from('empresas').update({ status: novoStatus }).eq('id', idEmpresa);
+                if (error) throw error;
+
+                alert(`✅ Acesso da empresa ${novoStatus === 'Pausado' ? 'pausado' : 'ativado'} com sucesso!`);
+                carregarEmpresas();
+            } catch (err) {
+                alert('❌ Erro ao alterar status: ' + err.message);
+            }
+        }
+
+        async function excluirEmpresa(idEmpresa, nomeEmpresa) {
+            if (!confirm(`⚠️ ATENÇÃO: Deseja realmente excluir a empresa "${nomeEmpresa}"?\n\nEsta ação removerá todos os dados vinculados.`)) return;
+
+            try {
+                await supabaseClient.from('funcionarios').delete().eq('id_empresa', idEmpresa);
+                await supabaseClient.from('setores').delete().eq('id_empresa', idEmpresa);
+                await supabaseClient.from('responsaveis').delete().eq('id_empresa', idEmpresa);
+                
+                const { error } = await supabaseClient.from('empresas').delete().eq('id', idEmpresa);
+                if (error) throw error;
+
+                alert('✅ Empresa excluída com sucesso!');
+                carregarEmpresas();
+            } catch (err) {
+                alert('❌ Erro ao excluir empresa: ' + err.message);
+            }
+        }
+
+        async function editarCredencialEmpresa(idEmpresa, tipo, valorAtual) {
+            const novoValor = prompt(`Digite o novo ${tipo === 'usuario' ? 'usuário' : 'senha'} para a empresa:`, valorAtual);
+            if (!novoValor || novoValor.trim() === '') return;
+
+            try {
+                const dadosAtualizacao = {};
+                dadosAtualizacao[tipo] = novoValor.trim();
+
+                const { error } = await supabaseClient.from('empresas').update(dadosAtualizacao).eq('id', idEmpresa);
+                if (error) throw error;
+
+                alert(`✅ ${tipo === 'usuario' ? 'Usuário' : 'Senha'} atualizado(a) com sucesso!`);
+                carregarEmpresas();
+            } catch (err) {
+                alert('❌ Erro ao atualizar: ' + err.message);
+            }
+        }
+
+        async function editarLimiteIds(idEmpresa, limiteAtual) {
+            const novoLimiteStr = prompt(`Digite o novo limite de IDs/Licenças para esta empresa:`, limiteAtual);
+            if (novoLimiteStr === null) return;
+
+            const novoLimite = parseInt(novoLimiteStr);
+            if (isNaN(novoLimite) || novoLimite < 1) {
+                alert('❌ Insira um número válido maior ou igual a 1.');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient.from('empresas').update({ limite_ids: novoLimite }).eq('id', idEmpresa);
+                if (error) throw error;
+
+                alert('✅ Limite de IDs atualizado com sucesso!');
+                carregarEmpresas();
+            } catch (err) {
+                alert('❌ Erro ao atualizar o limite de IDs: ' + err.message);
+            }
+        }
+
+        function selecionarEmpresaMaster(idEmpresa, nomeEmpresa) {
+            localStorage.setItem('master_empresa_ativa_id', idEmpresa);
+            localStorage.setItem('master_empresa_ativa_nome', nomeEmpresa);
+            try {
+                let usuario = JSON.parse(localStorage.getItem('pcm_usuario') || '{}');
+                usuario.idEmpresa = idEmpresa;
+                usuario.id_empresa = idEmpresa;
+                localStorage.setItem('pcm_usuario', JSON.stringify(usuario));
+            } catch (e) {}
+            window.location.href = '0painel-master.html'; 
+        }
+    </script>
+</body>
+</html>

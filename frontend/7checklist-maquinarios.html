@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM-360 - Checklist de Maquinários e Veículos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SDK do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background-image: url('fundo.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        .foto-empresa-zoom {
+            max-height: 48px; max-width: 160px; object-fit: contain; background: transparent;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
+        }
+        .foto-empresa-zoom:hover { transform: scale(2.2); z-index: 50; position: relative; }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-6 text-slate-100 flex items-center justify-center">
+
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm -z-10"></div>
+
+    <div class="w-full max-w-4xl bg-slate-900/90 border border-slate-700/60 rounded-2xl shadow-2xl p-6 sm:p-8 backdrop-md">
+        
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 border-b border-slate-800 mb-6 gap-4">
+            <div class="flex items-center justify-center">
+                <img id="logado-empresa-logo" src="" alt="Logo da Empresa" class="foto-empresa-zoom" style="display: none;">
+                <span id="logado-empresa-placeholder" class="text-xs font-bold text-slate-400 uppercase" style="display: none;">EMPRESA</span>
+            </div>
+
+            <div>
+                <img src="logo-pcm360.png" alt="PCM360 Gestão" class="h-10 w-auto object-contain">
+            </div>
+
+            <a href="0painel-master.html" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Voltar ao Painel
+            </a>
+        </div>
+
+        <div class="mb-6 pb-2 border-b border-slate-800">
+            <h1 class="text-xl sm:text-2xl font-extrabold tracking-wider text-cyan-400">Checklist Diário de Pré-Operação (Máquinas e Veículos)</h1>
+        </div>
+
+        <form id="checklistForm" class="space-y-6">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Tipo de Frota</label>
+                    <select id="tipoFrota" required class="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="">Selecione...</option>
+                        <option value="maquina">Máquina Pesada / Agrícola</option>
+                        <option value="veiculo">Veículo Leve / Utilitário</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Ativo / Placa / Equipamento</label>
+                    <input type="text" id="maquina" required placeholder="Ex: Trator 01 ou Placa ABC-1234" class="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Horímetro / KM Atual</label>
+                    <input type="text" id="horimetro" required placeholder="Ex: 4520 hrs ou 85400 km" class="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <h3 class="text-lg font-semibold text-emerald-400">Itens Obrigatórios de Verificação</h3>
+                    <span class="text-xs text-slate-400"><span class="text-emerald-400 font-bold">●</span> OK | <span class="text-rose-500 font-bold">●</span> NÃO OK</span>
+                </div>
+                
+                <div class="space-y-4" id="itensContainer">
+                    
+                    <!-- Item 1 -->
+                    <div class="p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg space-y-3">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-bold text-white item-titulo">1. Níveis de Óleo e Fluidos</p>
+                                <p class="text-xs text-slate-400">Verificar nível do óleo do motor, água do arrefecimento/radiador e reservatórios.</p>
+                            </div>
+                            <div class="flex gap-3 w-full sm:w-auto justify-end">
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                    <input type="radio" name="item1" value="OK" required onchange="toggleObs('obs1', false)" class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                                </label>
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                    <input type="radio" name="item1" value="Não OK" onchange="toggleObs('obs1', true)" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                                </label>
+                            </div>
+                        </div>
+                        <div id="obs1" class="hidden space-y-2 pt-2 border-t border-slate-700/50">
+                            <input type="text" placeholder="Descreva o problema encontrado neste item..." class="w-full px-3 py-2 bg-slate-900 border border-rose-500/50 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-rose-500">
+                            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-300 pt-1">
+                                <span class="font-semibold text-rose-400">Prioridade da OS:</span>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio1" value="Baixa" class="accent-cyan-400"> Baixa</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio1" value="Média" class="accent-cyan-400"> Média</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio1" value="Alta" class="accent-cyan-400"> Alta</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio1" value="Urgente" class="accent-cyan-400"> Urgente</label>
+                                <label class="flex items-center gap-1 cursor-pointer font-bold text-rose-400"><input type="radio" name="prio1" value="Parado/a" checked class="accent-rose-500"> Parado/a</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 2 -->
+                    <div class="p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg space-y-3">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-bold text-white item-titulo">2. Sistema de Freios e Estacionamento</p>
+                                <p class="text-xs text-slate-400">Testar a eficácia do pedal de freio e o travamento correto do freio de mão/estacionamento.</p>
+                            </div>
+                            <div class="flex gap-3 w-full sm:w-auto justify-end">
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                    <input type="radio" name="item2" value="OK" required onchange="toggleObs('obs2', false)" class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                                </label>
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                    <input type="radio" name="item2" value="Não OK" onchange="toggleObs('obs2', true)" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                                </label>
+                            </div>
+                        </div>
+                        <div id="obs2" class="hidden space-y-2 pt-2 border-t border-slate-700/50">
+                            <input type="text" placeholder="Descreva o problema encontrado neste item..." class="w-full px-3 py-2 bg-slate-900 border border-rose-500/50 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-rose-500">
+                            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-300 pt-1">
+                                <span class="font-semibold text-rose-400">Prioridade da OS:</span>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio2" value="Baixa" class="accent-cyan-400"> Baixa</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio2" value="Média" class="accent-cyan-400"> Média</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio2" value="Alta" class="accent-cyan-400"> Alta</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio2" value="Urgente" class="accent-cyan-400"> Urgente</label>
+                                <label class="flex items-center gap-1 cursor-pointer font-bold text-rose-400"><input type="radio" name="prio2" value="Parado/a" checked class="accent-rose-500"> Parado/a</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 3 -->
+                    <div class="p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg space-y-3">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-bold text-white item-titulo">3. Pneus, Esteiras e Calibragem</p>
+                                <p class="text-xs text-slate-400">Inspecionar cortes, desgaste excessivo, calibragem adequada e estado dos pinos/esteiras.</p>
+                            </div>
+                            <div class="flex gap-3 w-full sm:w-auto justify-end">
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                    <input type="radio" name="item3" value="OK" required onchange="toggleObs('obs3', false)" class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                                </label>
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                    <input type="radio" name="item3" value="Não OK" onchange="toggleObs('obs3', true)" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                                </label>
+                            </div>
+                        </div>
+                        <div id="obs3" class="hidden space-y-2 pt-2 border-t border-slate-700/50">
+                            <input type="text" placeholder="Descreva o problema encontrado neste item..." class="w-full px-3 py-2 bg-slate-900 border border-rose-500/50 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-rose-500">
+                            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-300 pt-1">
+                                <span class="font-semibold text-rose-400">Prioridade da OS:</span>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio3" value="Baixa" class="accent-cyan-400"> Baixa</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio3" value="Média" class="accent-cyan-400"> Média</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio3" value="Alta" class="accent-cyan-400"> Alta</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio3" value="Urgente" class="accent-cyan-400"> Urgente</label>
+                                <label class="flex items-center gap-1 cursor-pointer font-bold text-rose-400"><input type="radio" name="prio3" value="Parado/a" checked class="accent-rose-500"> Parado/a</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 4 -->
+                    <div class="p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg space-y-3">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-bold text-white item-titulo">4. Sistema Elétrico e Iluminação</p>
+                                <p class="text-xs text-slate-400">Conferir funcionamento de faróis, setas, luzes de freio, pisca-alerta, buzina e alarme de ré.</p>
+                            </div>
+                            <div class="flex gap-3 w-full sm:w-auto justify-end">
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                    <input type="radio" name="item4" value="OK" required onchange="toggleObs('obs4', false)" class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                                </label>
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                    <input type="radio" name="item4" value="Não OK" onchange="toggleObs('obs4', true)" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                                </label>
+                            </div>
+                        </div>
+                        <div id="obs4" class="hidden space-y-2 pt-2 border-t border-slate-700/50">
+                            <input type="text" placeholder="Descreva o problema encontrado neste item..." class="w-full px-3 py-2 bg-slate-900 border border-rose-500/50 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-rose-500">
+                            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-300 pt-1">
+                                <span class="font-semibold text-rose-400">Prioridade da OS:</span>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio4" value="Baixa" class="accent-cyan-400"> Baixa</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio4" value="Média" class="accent-cyan-400"> Média</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio4" value="Alta" class="accent-cyan-400"> Alta</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio4" value="Urgente" class="accent-cyan-400"> Urgente</label>
+                                <label class="flex items-center gap-1 cursor-pointer font-bold text-rose-400"><input type="radio" name="prio4" value="Parado/a" checked class="accent-rose-500"> Parado/a</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 5 -->
+                    <div class="p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg space-y-3">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-bold text-white item-titulo">5. Vazamentos Visíveis e Mangueiras</p>
+                                <p class="text-xs text-slate-400">Verificar se há poças no solo ou vestígios de óleo, combustível ou água vazando.</p>
+                            </div>
+                            <div class="flex gap-3 w-full sm:w-auto justify-end">
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                    <input type="radio" name="item5" value="OK" required onchange="toggleObs('obs5', false)" class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                                </label>
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                    <input type="radio" name="item5" value="Não OK" onchange="toggleObs('obs5', true)" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                                </label>
+                            </div>
+                        </div>
+                        <div id="obs5" class="hidden space-y-2 pt-2 border-t border-slate-700/50">
+                            <input type="text" placeholder="Descreva o problema encontrado neste item..." class="w-full px-3 py-2 bg-slate-900 border border-rose-500/50 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-rose-500">
+                            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-300 pt-1">
+                                <span class="font-semibold text-rose-400">Prioridade da OS:</span>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio5" value="Baixa" class="accent-cyan-400"> Baixa</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio5" value="Média" class="accent-cyan-400"> Média</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio5" value="Alta" class="accent-cyan-400"> Alta</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio5" value="Urgente" class="accent-cyan-400"> Urgente</label>
+                                <label class="flex items-center gap-1 cursor-pointer font-bold text-rose-400"><input type="radio" name="prio5" value="Parado/a" checked class="accent-rose-500"> Parado/a</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item 6 -->
+                    <div class="p-3.5 bg-slate-800/40 border border-slate-800 rounded-lg space-y-3">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-bold text-white item-titulo">6. Itens de Segurança e Cabine</p>
+                                <p class="text-xs text-slate-400">Checar cinto de segurança, retrovisores limpos/ajustados, limpador de para-brisa e documentos.</p>
+                            </div>
+                            <div class="flex gap-3 w-full sm:w-auto justify-end">
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-emerald-500/40 rounded-lg cursor-pointer text-sm font-bold text-emerald-400 hover:bg-emerald-950/30 transition">
+                                    <input type="radio" name="item6" value="OK" required onchange="toggleObs('obs6', false)" class="w-5 h-5 accent-emerald-500 cursor-pointer"> OK
+                                </label>
+                                <label class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/90 border border-rose-500/40 rounded-lg cursor-pointer text-sm font-bold text-rose-400 hover:bg-rose-950/30 transition">
+                                    <input type="radio" name="item6" value="Não OK" onchange="toggleObs('obs6', true)" class="w-5 h-5 accent-rose-500 cursor-pointer"> NÃO OK
+                                </label>
+                            </div>
+                        </div>
+                        <div id="obs6" class="hidden space-y-2 pt-2 border-t border-slate-700/50">
+                            <input type="text" placeholder="Descreva o problema encontrado neste item..." class="w-full px-3 py-2 bg-slate-900 border border-rose-500/50 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-rose-500">
+                            <div class="flex flex-wrap items-center gap-4 text-xs text-slate-300 pt-1">
+                                <span class="font-semibold text-rose-400">Prioridade da OS:</span>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio6" value="Baixa" class="accent-cyan-400"> Baixa</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio6" value="Média" class="accent-cyan-400"> Média</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio6" value="Alta" class="accent-cyan-400"> Alta</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="prio6" value="Urgente" class="accent-cyan-400"> Urgente</label>
+                                <label class="flex items-center gap-1 cursor-pointer font-bold text-rose-400"><input type="radio" name="prio6" value="Parado/a" checked class="accent-rose-500"> Parado/a</label>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="feedbackMsg" class="hidden text-center text-sm py-2 rounded-lg"></div>
+
+            <button type="submit" class="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-lg hover:shadow-emerald-500/20 transition duration-200">
+                Finalizar e Enviar Checklist
+            </button>
+        </form>
+
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://mswszxzeczyusnjccxit.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_-vY5LDwjwPB-BbFO1UCfQw_2ztUDsUp";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function formatarLinkImagem(url) {
+            if (!url) return '';
+            url = url.trim();
+            if (url.includes('drive.google.com')) {
+                let fileId = '';
+                const matchD = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                const matchId = url.match(/id=([a-zA-Z0-9_-]+)/);
+                if (matchD && matchD[1]) fileId = matchD[1];
+                else if (matchId && matchId[1]) fileId = matchId[1];
+                if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
+            }
+            return url;
+        }
+
+        function obterIdEmpresaAtiva() {
+            const empresaMasterId = localStorage.getItem('master_empresa_ativa_id');
+            if (empresaMasterId) return empresaMasterId;
+
+            try {
+                const usuarioStr = localStorage.getItem('pcm_usuario');
+                if (!usuarioStr) return null;
+                const usuario = JSON.parse(usuarioStr);
+                return usuario.id || usuario.idEmpresa || usuario.id_empresa || usuario.empresa_id || null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            carregarCabecalhoEmpresa();
+        });
+
+        async function carregarCabecalhoEmpresa() {
+            const empresaId = obterIdEmpresaAtiva();
+            if (!empresaId) return;
+
+            try {
+                const { data: empresa, error } = await supabaseClient
+                    .from('empresas')
+                    .select('*')
+                    .eq('id', empresaId)
+                    .single();
+
+                if (error || !empresa) return;
+
+                const linkLogoBruto = empresa.link_imagem || empresa.foto || empresa.logo || '';
+                const logoEmpresa = formatarLinkImagem(linkLogoBruto);
+
+                const elLogo = document.getElementById('logado-empresa-logo');
+                const elPlaceholder = document.getElementById('logado-empresa-placeholder');
+
+                if (elLogo && logoEmpresa) {
+                    elLogo.src = logoEmpresa;
+                    elLogo.style.display = 'block';
+                    if (elPlaceholder) elPlaceholder.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("Erro ao carregar a logo da empresa:", err);
+            }
+        }
+
+        function toggleObs(idDiv, mostrar) {
+            const div = document.getElementById(idDiv);
+            const input = div.querySelector('input[type="text"]');
+            if (mostrar) {
+                div.classList.remove('hidden');
+                input.required = true;
+            } else {
+                div.classList.add('hidden');
+                input.required = false;
+                input.value = '';
+            }
+        }
+
+        const form = document.getElementById('checklistForm');
+        const feedbackMsg = document.getElementById('feedbackMsg');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const tipoFrota = document.getElementById('tipoFrota').value;
+            const maquina = document.getElementById('maquina').value.trim().toUpperCase();
+            const horimetro = document.getElementById('horimetro').value.trim();
+
+            const itensChecklist = {};
+            const falhasEncontradas = [];
+
+            for (let i = 1; i <= 6; i++) {
+                const radioSelecionado = document.querySelector(`input[name="item${i}"]:checked`);
+                const status = radioSelecionado ? radioSelecionado.value : '';
+                const obsInput = document.querySelector(`#obs${i} input[type="text"]`);
+                const obs = (status === 'Não OK' && obsInput) ? obsInput.value.trim() : '';
+                
+                const prioSelecionada = document.querySelector(`input[name="prio${i}"]:checked`);
+                const prioridade = prioSelecionada ? prioSelecionada.value : 'Parado/a';
+
+                itensChecklist[`item_${i}`] = {
+                    status: status,
+                    observacao: obs,
+                    prioridade: prioridade
+                };
+
+                if (status === 'Não OK' && obs) {
+                    const tituloItem = document.querySelectorAll('.item-titulo')[i - 1].textContent;
+                    falhasEncontradas.push({
+                        descricao: `[Checklist] ${tituloItem}: ${obs}`,
+                        prioridade: prioridade
+                    });
+                }
+            }
+
+            const usuarioLogado = JSON.parse(localStorage.getItem('pcm_usuario')) || { nome: 'Operador Padrão', setor: 'Geral' };
+            const idEmpresa = obterIdEmpresaAtiva();
+
+            try {
+                feedbackMsg.textContent = 'Salvando checklist...';
+                feedbackMsg.className = 'text-amber-400 bg-amber-950/40 border border-amber-800/50 block text-center text-sm py-2 rounded-lg';
+
+                // 1. Salva o checklist no Supabase
+                const { error: errChecklist } = await supabaseClient
+                    .from('checklists')
+                    .insert([{
+                        empresa_id: String(idEmpresa),
+                        tipo_frota: tipoFrota,
+                        maquina: maquina,
+                        horimetro: horimetro,
+                        itens: itensChecklist,
+                        operador: usuarioLogado.nome
+                    }]);
+
+                if (errChecklist) throw errChecklist;
+
+                // 2. Se houver falhas, cria uma Ordem de Serviço separada para cada falha detetada
+                if (falhasEncontradas.length > 0 && idEmpresa) {
+                    feedbackMsg.textContent = `A detetar falhas! A abrir ${falhasEncontradas.length} Ordem(ns) de Serviço...`;
+                    
+                    for (const falha of falhasEncontradas) {
+                        const dadosOS = {
+                            empresa_id: String(idEmpresa),
+                            funcionario: usuarioLogado.nome,
+                            funcionario_setor: usuarioLogado.setor || 'Operação',
+                            descricao: falha.descricao,
+                            equipamento: maquina,
+                            ativo: "0000-00",
+                            prioridade: falha.prioridade,
+                            setores: 'Manutenção',
+                            status: 'Aberta',
+                            pecas: '',
+                            tempo_execucao_segundos: 0,
+                            tempo_pausa_segundos: 0,
+                            motivo_pausa: ''
+                        };
+
+                        let { error: errOS } = await supabaseClient.from('ordens_servico').insert([dadosOS]);
+                        if (errOS && errOS.message && errOS.message.includes('empresa_id')) {
+                            delete dadosOS.empresa_id;
+                            dadosOS.id_empresa = String(idEmpresa);
+                            await supabaseClient.from('ordens_servico').insert([dadosOS]);
+                        }
+                    }
+
+                    setTimeout(() => {
+                        window.location.href = '5tela-de-os.html';
+                    }, 1500);
+                    return;
+                }
+
+                feedbackMsg.textContent = 'Checklist enviado com sucesso!';
+                feedbackMsg.className = 'text-emerald-400 bg-emerald-950/40 border border-emerald-800/50 block text-center text-sm py-2 rounded-lg';
+
+                setTimeout(() => {
+                    form.reset();
+                    for (let i = 1; i <= 6; i++) {
+                        document.getElementById(`obs${i}`).classList.add('hidden');
+                    }
+                    feedbackMsg.classList.add('hidden');
+                }, 2500);
+
+            } catch (error) {
+                console.error('Erro ao processar checklist:', error);
+                feedbackMsg.textContent = 'Erro ao conectar com o banco de dados: ' + (error.message || '');
+                feedbackMsg.className = 'text-rose-400 bg-rose-950/40 border border-rose-800/50 block text-center text-sm py-2 rounded-lg';
+            }
+        });
+    </script>
+</body>
+</html>

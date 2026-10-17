@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM-360 — Central do Almoxarifado e Gestão de Peças</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SDK do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background-image: url('fundo.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-color: #0b0f19;
+        }
+        .dashboard-card {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+            position: relative;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8 text-slate-100 flex flex-col items-center">
+
+    <!-- Overlay escuro sutil -->
+    <div class="absolute inset-0 bg-[#070a12]/85 backdrop-blur-sm -z-10"></div>
+
+    <!-- Container Principal -->
+    <div class="w-full max-w-7xl flex flex-col gap-6">
+        
+        <!-- Cabeçalho Principal -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-2 gap-4">
+            <div>
+                <h1 class="text-3xl sm:text-4xl font-light tracking-wide text-white">Central do <span class="text-emerald-400 font-normal">Almoxarifado</span></h1>
+                <p class="text-slate-400 text-sm mt-1">Gerenciamento de solicitações de peças e liberação de chaves das Ordens de Serviço</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="carregarPedidosAlmoxarifado()" class="px-4 py-2 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-slate-200 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Atualizar Pedidos
+                </button>
+                <a href="0painel-master.html" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-lg shadow-emerald-600/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Painel Master
+                </a>
+            </div>
+        </div>
+
+        <!-- Seção Principal: Lista de Pedidos de Peças em Tempo Real -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="blocosPedidosContainer">
+            <div class="dashboard-card bg-slate-900/80 p-6 text-center text-slate-400 col-span-full py-12">
+                Carregando solicitações de peças do Supabase...
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://mswszxzeczyusnjccxit.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_-vY5LDwjwPB-BbFO1UCfQw_2ztUDsUp";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function carregarPedidosAlmoxarifado() {
+            const container = document.getElementById('blocosPedidosContainer');
+            container.innerHTML = '<div class="dashboard-card bg-slate-900/80 p-6 text-center text-slate-400 col-span-full py-12">Atualizando pedidos...</div>';
+
+            try {
+                const { data: ordens, error } = await supabaseClient
+                    .from('ordens_servico')
+                    .select('*')
+                    .not('pecas', 'is', null)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                // Filtra pedidos que possuem peças e OMITTE as concluídas (status Concluída some da lista)
+                const pedidosPecas = ordens.filter(os => {
+                    const temPecas = os.pecas && os.pecas.trim() !== '';
+                    const naoConcluida = (os.status || 'Aberta') !== 'Concluída';
+                    return temPecas && naoConcluida;
+                });
+
+                if (pedidosPecas.length === 0) {
+                    container.innerHTML = `
+                        <div class="dashboard-card bg-slate-900/80 p-6 text-center text-slate-400 col-span-full py-12">
+                            <p class="text-base font-medium text-slate-300">Nenhuma solicitação de peça pendente no momento.</p>
+                            <p class="text-xs text-slate-500 mt-1">Quando os mecânicos solicitarem peças nas Ordens de Serviço ativas, elas aparecerão aqui automaticamente.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                pedidosPecas.forEach(os => {
+                    const status = os.status || 'Aberta';
+                    const aberta = status === 'Aberta';
+                    const chaveLiberada = os.numero_chave && os.numero_chave.trim() !== '';
+                    
+                    // Cores do bloco: Vermelho suave se aberta, Verde se em andamento/pausada
+                    const corFundoCard = aberta 
+                        ? 'bg-rose-950/40 border-rose-500/30' 
+                        : 'bg-emerald-950/40 border-emerald-500/30';
+
+                    const badgeStatus = aberta
+                        ? `<span class="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-md text-xs font-semibold animate-pulse">Aberta</span>`
+                        : `<span class="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-md text-xs font-semibold">${status}</span>`;
+
+                    const badgeChave = chaveLiberada
+                        ? `<span class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md text-xs font-semibold">Chave: ${os.numero_chave}</span>`
+                        : `<span class="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-md text-xs font-semibold animate-pulse">Aguardando Chave</span>`;
+
+                    let textoPecas = os.pecas;
+                    if (textoPecas.includes('x')) {
+                        textoPecas = textoPecas.replace(/(\d+)\s*x\s*/i, '$1 und / ');
+                    }
+
+                    html += `
+                        <div class="dashboard-card ${corFundoCard} p-6 flex flex-col justify-between gap-4 shadow-xl">
+                            <div>
+                                <div class="flex justify-between items-center mb-3">
+                                    ${badgeStatus}
+                                    ${badgeChave}
+                                </div>
+                                <div class="mb-3">
+                                    <h3 class="text-base font-bold text-white">${os.equipamento || 'Equipamento não informado'}</h3>
+                                </div>
+                                <div class="space-y-2 text-xs text-slate-300 border-t border-white/10 pt-3">
+                                    <p><span class="text-slate-400">Setores:</span> <span class="text-white">${os.setores || 'Geral'}</span></p>
+                                    <p><span class="text-slate-400">Solicitante / Executor:</span> <span class="text-white font-medium">${os.executor || os.funcionario || 'Não informado'}</span></p>
+                                    <div class="mt-2 bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+                                        <p class="text-slate-400 mb-1 font-semibold">Peça / Material:</p>
+                                        <p class="text-slate-200 font-mono text-sm font-bold text-emerald-400">${textoPecas}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pt-2">
+                                <button onclick="liberarChave('${os.id}', '${os.numero_chave || ''}')" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                    </svg>
+                                    ${chaveLiberada ? 'Editar / Alterar Número da Chave' : 'Informar Número da Chave'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error("Erro ao carregar pedidos do almoxarifado:", error);
+            }
+        }
+
+        async function liberarChave(idOS, chaveAtual) {
+            const novaChave = prompt(`Informe o Número da Chave para retirada dos materiais desta OS:`, chaveAtual);
+            if (novaChave === null) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('ordens_servico')
+                    .update({ numero_chave: novaChave.trim() })
+                    .eq('id', idOS);
+
+                if (error) throw error;
+                alert('Número da chave atualizado e liberado com sucesso!');
+                carregarPedidosAlmoxarifado();
+            } catch (error) {
+                console.error("Erro ao liberar chave:", error);
+                alert('Erro ao atualizar chave no banco de dados: ' + error.message);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            carregarPedidosAlmoxarifado();
+            setInterval(carregarPedidosAlmoxarifado, 20000);
+        });
+    </script>
+</body>
+</html>

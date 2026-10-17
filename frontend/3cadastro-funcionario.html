@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCM360 - Cadastro de Funcionários</title>
+    <!-- SDK oficial do Supabase para integração com a base de dados -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background-color: #051622;
+            background-image: linear-gradient(rgba(5, 22, 34, 0.75), rgba(5, 22, 34, 0.85)), url('fundo.png');
+            background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
+            color: #ffffff; min-height: 100vh; padding: 15px;
+        }
+        .container { max-width: 900px; margin: 0 auto; background: rgba(8, 30, 48, 0.9); border-radius: 12px; border: 1px solid rgba(0, 212, 255, 0.3); padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3a5f; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .header h2 { color: #00d4ff; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        .btn-voltar { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s; }
+        .btn-voltar:hover { background: #475569; }
+        .content-section { background: rgba(2, 12, 20, 0.6); padding: 15px; border-radius: 8px; border: 1px solid #1e3a5f; margin-bottom: 20px; }
+        
+        .form-row { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        
+        input, select { 
+            width: 100%; padding: 10px; background: rgba(2, 12, 20, 0.8); 
+            border: 1px solid #1e3a5f; border-radius: 6px; color: #fff; margin-top: 5px; font-size: 14px; 
+        }
+        #func-nome { text-transform: uppercase; }
+        input:focus, select:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 8px rgba(0, 212, 255, 0.4); }
+        
+        select option { background: #051622; color: #fff; }
+        
+        .btn-salvar { background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; font-size: 14px; transition: opacity 0.2s; margin-top: 5px; }
+        .btn-salvar:hover { opacity: 0.9; }
+
+        .btn-acao-mini { background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .btn-acao-mini:hover { background: rgba(56, 189, 248, 0.4); }
+
+        .funcionarios-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+        .funcionario-card { background: rgba(4, 18, 30, 0.9); border: 1px solid #1e3a5f; border-radius: 8px; padding: 15px; border-left: 4px solid #10b981; display: flex; flex-direction: column; justify-content: space-between; }
+        .funcionario-card.pausado { border-left-color: #f59e0b; opacity: 0.85; }
+
+        /* Zoom e estilo limpo (sem fundo / sem formato redondo) para a foto da empresa */
+        .foto-empresa-zoom {
+            max-height: 48px; max-width: 160px; object-fit: contain; background: transparent;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
+        }
+        .foto-empresa-zoom:hover { transform: scale(2.2); z-index: 50; position: relative; }
+
+        /* Zoom e estilo limpo (sem fundo / retangular) para a foto do funcionário */
+        .foto-funcionario-zoom {
+            width: 48px; height: 48px; border-radius: 8px; object-fit: contain;
+            border: 1px solid #00d4ff; background: transparent;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
+        }
+        .foto-funcionario-zoom:hover { transform: scale(2.2); z-index: 50; position: relative; }
+
+        .acoes-card { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 12px; border-top: 1px solid rgba(30, 58, 95, 0.6); padding-top: 10px; }
+        .btn-acao-resp { background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; padding: 5px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; text-align: center; }
+        .btn-pausar-resp { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; padding: 5px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; text-align: center; }
+        .btn-retornar-resp { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; padding: 5px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; text-align: center; }
+        .btn-excluir-resp { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 5px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <img id="logado-empresa-logo" src="" alt="Logo da Empresa" class="foto-empresa-zoom" style="display: none;">
+                <span id="logado-empresa-placeholder" style="font-size: 11px; color: #94a3b8; font-weight: bold; text-transform: uppercase; display: none;">EMPRESA</span>
+            </div>
+
+            <div>
+                <img src="logo-pcm360.png" alt="PCM360 Gestão" style="height: 40px; width: auto; object-fit: contain;">
+            </div>
+            
+            <button id="btnVoltarPainel" class="btn-voltar" type="button">⬅ Voltar ao Painel</button>
+
+        </div>
+
+        <div style="margin-bottom: 20px; border-bottom: 1px solid #1e3a5f; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <h2 style="color: #00d4ff; font-size: 18px;">👥 Cadastro de Funcionários</h2>
+            <div id="badgeLimiteIds" style="background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); padding: 4px 10px; border-radius: 6px; font-size: 12px; color: #38bdf8; font-weight: bold;">
+                Licenças / IDs: Verificando...
+            </div>
+        </div>
+
+        <div class="content-section">
+            <h3 style="color: #38bdf8; margin-bottom: 15px; font-size: 16px;">Cadastrar Novo Funcionário</h3>
+            
+            <div class="form-row">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1; font-weight:500;">Nome Completo</label>
+                    <input type="text" id="func-nome" placeholder="Ex: Francisco Eraldo">
+                </div>
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1; font-weight:500;">Matrícula</label>
+                    <input type="text" id="func-matricula" maxlength="6" placeholder="Ex: 010311">
+                </div>
+            </div>
+
+            <div class="form-row-2">
+                <div>
+                    <label style="font-size:12px; color:#cbd5e1; font-weight:500;">Setor</label>
+                    <select id="func-setor">
+                        <option value="">Carregando setores...</option>
+                    </select>
+                </div>
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                        <label style="font-size:12px; color:#cbd5e1; font-weight:500;">Cargo / Função</label>
+                        <div style="display: flex; gap: 4px;">
+                            <button type="button" onclick="adicionarNovoCargo()" class="btn-acao-mini" title="Adicionar Novo Cargo">➕ Novo</button>
+                            <button type="button" onclick="excluirCargoSelecionado()" class="btn-acao-mini" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); color: #f87171;" title="Excluir Cargo Selecionado">🗑️ Excluir</button>
+                        </div>
+                    </div>
+                    <select id="func-cargo">
+                        <option value="">Carregando cargos...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-size:12px; color:#cbd5e1; font-weight:500;">Link da Foto (Google Drive ou Imagem)</label>
+                <input type="text" id="func-foto" placeholder="Cole o link da foto do funcionário aqui" style="text-transform: none;">
+            </div>
+            
+            <button id="btn-salvar-funcionario" class="btn-salvar" type="button">Salvar Funcionário na Base</button>
+        </div>
+
+        <div class="content-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="color: #38bdf8; font-size: 16px;">Funcionários Cadastrados</h3>
+                <button onclick="carregarFuncionarios()" style="background: #1e3a5f; color: #38bdf8; border: 1px solid #00d4ff; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">🔄 Atualizar Lista</button>
+            </div>
+            
+            <div id="loadingFuncionarios" style="text-align: center; color: #94a3b8; font-size: 13px; padding: 20px;">Carregando funcionários...</div>
+            <div id="gridFuncionarios" class="funcionarios-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://mswszxzeczyusnjccxit.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_-vY5LDwjwPB-BbFO1UCfQw_2ztUDsUp";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function formatarLinkImagem(url) {
+            if (!url) return '';
+            url = url.trim();
+            if (url.includes('drive.google.com')) {
+                let fileId = '';
+                const matchD = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                const matchId = url.match(/id=([a-zA-Z0-9_-]+)/);
+                if (matchD && matchD[1]) fileId = matchD[1];
+                else if (matchId && matchId[1]) fileId = matchId[1];
+                if (fileId) return `https://drive.google.com/thumbnail?id=${fileId}&sz=w500`;
+            }
+            return url;
+        }
+
+        function obterIdEmpresaAtiva() {
+            const empresaMasterId = localStorage.getItem('master_empresa_ativa_id');
+            if (empresaMasterId) return empresaMasterId;
+
+            try {
+                const usuarioStr = localStorage.getItem('pcm_usuario');
+                if (!usuarioStr) return null;
+                const usuario = JSON.parse(usuarioStr);
+                return usuario.idEmpresa || usuario.id_empresa || usuario.empresa_id || usuario.id || null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function obterUsuarioLogado() {
+            try {
+                const usuarioStr = localStorage.getItem('pcm_usuario');
+                if (!usuarioStr) return null;
+                return JSON.parse(usuarioStr);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            carregarCabecalhoEmpresa();
+
+            const btnVoltar = document.getElementById('btnVoltarPainel');
+            if (btnVoltar) {
+                btnVoltar.addEventListener('click', () => {
+                    window.location.href = '0painel-master.html';
+                });
+            }
+
+            document.getElementById('btn-salvar-funcionario').addEventListener('click', salvarFuncionario);
+            
+            carregarSetoresSelect();
+            carregarCargosSelect();
+            carregarFuncionarios();
+        });
+
+        async function carregarCabecalhoEmpresa() {
+            const empresaId = obterIdEmpresaAtiva();
+            if (!empresaId) return;
+
+            try {
+                const { data: empresa, error } = await supabaseClient
+                    .from('empresas')
+                    .select('*')
+                    .eq('id', empresaId)
+                    .single();
+
+                if (error || !empresa) return;
+
+                const linkLogoBruto = empresa.link_imagem || empresa.foto || empresa.logo || '';
+                const logoEmpresa = formatarLinkImagem(linkLogoBruto);
+
+                const elLogo = document.getElementById('logado-empresa-logo');
+                const elPlaceholder = document.getElementById('logado-empresa-placeholder');
+
+                if (elLogo && logoEmpresa) {
+                    elLogo.src = logoEmpresa;
+                    elLogo.style.display = 'block';
+                    if (elPlaceholder) elPlaceholder.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("Erro ao carregar a logo da empresa:", err);
+            }
+        }
+
+        async function obterNomeSetorResponsavel() {
+            const usuarioLogado = obterUsuarioLogado();
+            if (!usuarioLogado) return null;
+
+            const cargoRaw = usuarioLogado.cargo ? usuarioLogado.cargo.toLowerCase().trim() : '';
+            const isResponsavel = cargoRaw.includes('responsável') || cargoRaw.includes('responsavel');
+            if (!isResponsavel) return null;
+
+            try {
+                const identificadorResp = usuarioLogado.usuario || usuarioLogado.nome;
+                const { data: respData } = await supabaseClient
+                    .from('responsaveis')
+                    .select('id_setor')
+                    .or(`usuario.eq.${identificadorResp},nome.eq.${identificadorResp}`)
+                    .maybeSingle();
+
+                if (respData && respData.id_setor) {
+                    const { data: setorData } = await supabaseClient
+                        .from('setores')
+                        .select('nome')
+                        .eq('id', respData.id_setor)
+                        .maybeSingle();
+
+                    if (setorData && setorData.nome) {
+                        return setorData.nome.trim();
+                    }
+                }
+            } catch (e) {
+                console.error("Erro ao buscar setor do responsável:", e);
+            }
+            return null;
+        }
+
+        async function carregarSetoresSelect() {
+            const idEmpresa = obterIdEmpresaAtiva();
+            const selectSetor = document.getElementById('func-setor');
+            
+            if (!idEmpresa) {
+                selectSetor.innerHTML = '<option value="">Nenhuma empresa selecionada</option>';
+                return;
+            }
+
+            try {
+                const nomeSetorResp = await obterNomeSetorResponsavel();
+
+                const { data: setores, error } = await supabaseClient
+                    .from('setores')
+                    .select('nome')
+                    .eq('id_empresa', idEmpresa)
+                    .order('nome', { ascending: true });
+
+                if (error) throw error;
+
+                selectSetor.innerHTML = '<option value="">Selecione o setor...</option>';
+                if (setores && setores.length > 0) {
+                    setores.forEach(setor => {
+                        if (nomeSetorResp && setor.nome.trim().toUpperCase() !== nomeSetorResp.toUpperCase()) {
+                            return;
+                        }
+
+                        const opt = document.createElement('option');
+                        opt.value = setor.nome;
+                        opt.textContent = setor.nome;
+                        selectSetor.appendChild(opt);
+                    });
+
+                    if (nomeSetorResp && selectSetor.options.length === 2) {
+                        selectSetor.selectedIndex = 1;
+                    }
+                } else {
+                    selectSetor.innerHTML = '<option value="">Nenhum setor cadastrado</option>';
+                }
+            } catch (erro) {
+                selectSetor.innerHTML = '<option value="">Erro ao carregar setores</option>';
+            }
+        }
+
+        async function carregarCargosSelect(cargoSelecionado = '') {
+            const idEmpresa = obterIdEmpresaAtiva();
+            const selectCargo = document.getElementById('func-cargo');
+            if (!idEmpresa) return;
+
+            try {
+                const { data: empData } = await supabaseClient
+                    .from('empresas')
+                    .select('cargos_personalizados')
+                    .eq('id', idEmpresa)
+                    .single();
+
+                let listaCargos = [];
+                if (empData && empData.cargos_personalizados) {
+                    try {
+                        listaCargos = JSON.parse(empData.cargos_personalizados);
+                    } catch (e) { listaCargos = []; }
+                }
+
+                if (!listaCargos || listaCargos.length === 0) {
+                    listaCargos = ['DIRETOR', 'GERENTE', 'COORDENADOR', 'SUPERVISOR', 'ENCARREGADO', 'ELETRICISTA', 'MECÂNICO', 'OPERADOR', 'APRENDIZ'];
+                }
+
+                selectCargo.innerHTML = '<option value="">Selecione o cargo...</option>';
+                listaCargos.forEach(cargo => {
+                    const opt = document.createElement('option');
+                    opt.value = cargo;
+                    opt.textContent = cargo;
+                    if (cargo === cargoSelecionado) opt.selected = true;
+                    selectCargo.appendChild(opt);
+                });
+            } catch (err) {
+                selectCargo.innerHTML = '<option value="">Erro ao carregar cargos</option>';
+            }
+        }
+
+        async function adicionarNovoCargo() {
+            const novoCargo = prompt('Digite o nome do novo cargo/função:');
+            if (!novoCargo || !novoCargo.trim()) return;
+
+            const cargoFormatado = novoCargo.trim().toUpperCase();
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) return;
+
+            try {
+                const { data: empData } = await supabaseClient
+                    .from('empresas')
+                    .select('cargos_personalizados')
+                    .eq('id', idEmpresa)
+                    .single();
+
+                let listaCargos = [];
+                if (empData && empData.cargos_personalizados) {
+                    try { listaCargos = JSON.parse(empData.cargos_personalizados); } catch (e) {}
+                }
+                if (!listaCargos.length) {
+                    listaCargos = ['DIRETOR', 'GERENTE', 'COORDENADOR', 'SUPERVISOR', 'ENCARREGADO', 'ELETRICISTA', 'MECÂNICO', 'OPERADOR', 'APRENDIZ'];
+                }
+
+                if (!listaCargos.includes(cargoFormatado)) {
+                    listaCargos.push(cargoFormatado);
+                    listaCargos.sort();
+                }
+
+                const { error } = await supabaseClient
+                    .from('empresas')
+                    .update({ cargos_personalizados: JSON.stringify(listaCargos) })
+                    .eq('id', idEmpresa);
+
+                if (error) throw error;
+
+                await carregarCargosSelect(cargoFormatado);
+                alert('Cargo adicionado com sucesso!');
+            } catch (err) {
+                alert('Erro ao salvar novo cargo: ' + err.message);
+            }
+        }
+
+        async function excluirCargoSelecionado() {
+            const selectCargo = document.getElementById('func-cargo');
+            const cargoAtual = selectCargo.value;
+            if (!cargoAtual) {
+                alert('Selecione no menu o cargo que deseja excluir.');
+                return;
+            }
+
+            if (!confirm(`Deseja realmente remover o cargo "${cargoAtual}" da lista?`)) return;
+
+            const idEmpresa = obterIdEmpresaAtiva();
+            try {
+                const { data: empData } = await supabaseClient
+                    .from('empresas')
+                    .select('cargos_personalizados')
+                    .eq('id', idEmpresa)
+                    .single();
+
+                let listaCargos = [];
+                if (empData && empData.cargos_personalizados) {
+                    try { listaCargos = JSON.parse(empData.cargos_personalizados); } catch (e) {}
+                }
+                if (!listaCargos.length) {
+                    listaCargos = ['DIRETOR', 'GERENTE', 'COORDENADOR', 'SUPERVISOR', 'ENCARREGADO', 'ELETRICISTA', 'MECÂNICO', 'OPERADOR', 'APRENDIZ'];
+                }
+
+                listaCargos = listaCargos.filter(c => c !== cargoAtual);
+
+                await supabaseClient
+                    .from('empresas')
+                    .update({ cargos_personalizados: JSON.stringify(listaCargos) })
+                    .eq('id', idEmpresa);
+
+                carregarCargosSelect();
+                alert('Cargo removido com sucesso!');
+            } catch (err) {
+                alert('Erro ao excluir cargo: ' + err.message);
+            }
+        }
+
+        function gerarCredenciaisFuncionario(nome) {
+            const limpo = nome.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 5);
+            const randomNum = Math.floor(100 + Math.random() * 900);
+            return {
+                usuario: `func_${limpo}${randomNum}`,
+                senha: Math.random().toString(36).slice(-8)
+            };
+        }
+
+        async function salvarFuncionario() {
+            const idEmpresa = obterIdEmpresaAtiva();
+            if (!idEmpresa) {
+                alert('Sessão expirada. Faça login novamente.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const nome = document.getElementById('func-nome').value.trim().toUpperCase();
+            const matricula = document.getElementById('func-matricula').value.trim();
+            const setor = document.getElementById('func-setor').value;
+            const cargo = document.getElementById('func-cargo').value;
+            const fotoBruta = document.getElementById('func-foto').value.trim();
+            const foto = formatarLinkImagem(fotoBruta);
+            
+            if (!nome || !matricula || !setor || !cargo) {
+                alert('❌ Preencha todos os campos obrigatórios!');
+                return;
+            }
+
+            const nomeSetorResp = await obterNomeSetorResponsavel();
+            if (nomeSetorResp && setor.trim().toUpperCase() !== nomeSetorResp.toUpperCase()) {
+                alert('❌ Você só pode cadastrar funcionários para o seu próprio setor!');
+                return;
+            }
+
+            try {
+                const { data: empresaData } = await supabaseClient.from('empresas').select('*').eq('id', idEmpresa).single();
+                const limiteIdsLiberados = parseInt(empresaData?.ids_liberados || empresaData?.limite_ids || empresaData?.vagas || 1);
+
+                const { data: funcList } = await supabaseClient.from('funcionarios').select('id').eq('id_empresa', idEmpresa);
+                const totalFunc = funcList ? funcList.length : 0;
+
+                const { data: respList } = await supabaseClient.from('responsaveis').select('id').eq('id_empresa', idEmpresa);
+                const totalResp = respList ? respList.length : 0;
+
+                const totalGeralEmUso = 1 + totalResp + totalFunc;
+
+                if (totalGeralEmUso >= limiteIdsLiberados) {
+                    alert(`❌ Limite de IDs atingido!\nO limite desta empresa é de ${limiteIdsLiberados} ID(s) e já existem ${totalGeralEmUso} acessos ativos.`);
+                    return;
+                }
+
+                const creds = gerarCredenciaisFuncionario(nome);
+                const { error } = await supabaseClient.from('funcionarios').insert([{
+                    id_empresa: idEmpresa,
+                    nome: nome,
+                    matricula: matricula,
+                    setor: setor,
+                    cargo: cargo,
+                    link_imagem: foto,
+                    usuario: creds.usuario,
+                    senha: creds.senha,
+                    status: 'Ativo'
+                }]);
+
+                if (error) throw error;
+
+                alert(`✅ Funcionário cadastrado!\nUsuário: ${creds.usuario}\nSenha: ${creds.senha}`);
+                document.getElementById('func-nome').value = '';
+                document.getElementById('func-matricula').value = '';
+                document.getElementById('func-foto').value = '';
+                carregarSetoresSelect();
+                carregarFuncionarios();
+            } catch (erro) {
+                alert('❌ Erro ao salvar: ' + erro.message);
+            }
+        }
+
+        async function carregarFuncionarios() {
+            const idEmpresa = obterIdEmpresaAtiva();
+            const grid = document.getElementById('gridFuncionarios');
+            const loading = document.getElementById('loadingFuncionarios');
+            loading.style.display = 'block';
+            grid.innerHTML = '';
+
+            try {
+                let empresa = null;
+                let funcionarios = [];
+                let totalResponsaveis = 0;
+
+                if (idEmpresa) {
+                    const { data: empresaData } = await supabaseClient.from('empresas').select('*').eq('id', idEmpresa).single();
+                    empresa = empresaData;
+
+                    const { data: funcData } = await supabaseClient.from('funcionarios').select('*').eq('id_empresa', idEmpresa);
+                    funcionarios = funcData || [];
+
+                    const { data: respList } = await supabaseClient.from('responsaveis').select('id').eq('id_empresa', idEmpresa);
+                    totalResponsaveis = respList ? respList.length : 0;
+                }
+
+                const nomeSetorResp = await obterNomeSetorResponsavel();
+                if (nomeSetorResp) {
+                    const setorFiltro = nomeSetorResp.toLowerCase().trim();
+                    funcionarios = funcionarios.filter(f => f.setor && f.setor.toLowerCase().trim() === setorFiltro);
+                }
+
+                const limiteIds = parseInt(empresa?.ids_liberados || empresa?.limite_ids || empresa?.vagas || 1);
+                const totalUsoGeral = 1 + totalResponsaveis + funcionarios.length;
+
+                const badge = document.getElementById('badgeLimiteIds');
+                if (badge) {
+                    badge.textContent = `Licenças / IDs: ${totalUsoGeral} de ${limiteIds} em uso`;
+                }
+
+                loading.style.display = 'none';
+
+                if (funcionarios.length > 0) {
+                    funcionarios.forEach(func => {
+                        const card = document.createElement('div');
+                        const isPausado = func.status === 'Pausado';
+                        card.className = `funcionario-card ${isPausado ? 'pausado' : ''}`;
+                        
+                        const fotoSrc = func.link_imagem ? formatarLinkImagem(func.link_imagem) : 'https://via.placeholder.com/80?text=Sem+Foto';
+                        const usuarioVal = func.usuario || 'N/A';
+                        const senhaVal = func.senha || 'N/A';
+                        
+                        const avisoPausado = isPausado ? `<div style="color: #fbbf24; font-size: 10px; font-weight: bold; margin-bottom: 4px;">⚠️ ACESSO PAUSADO (FÉRIAS)</div>` : '';
+                        const botaoPausarRetornar = isPausado
+                            ? `<button class="btn-retornar-resp" onclick="alterarStatusFuncionario('${func.id}', 'Ativo')">▶ Retornar</button>`
+                            : `<button class="btn-pausar-resp" onclick="alterarStatusFuncionario('${func.id}', 'Pausado')">⏸ Pausar</button>`;
+
+                        card.innerHTML = `
+                            <div>
+                                ${avisoPausado}
+                                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                                    <img src="${fotoSrc}" alt="Foto" class="foto-funcionario-zoom" onerror="this.src='https://via.placeholder.com/80?text=Erro';">
+                                    <div style="overflow: hidden; flex: 1;">
+                                        <h4 style="color: #00d4ff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👤 ${func.nome}</h4>
+                                        <p style="font-size: 11px; color: #cbd5e1;"><strong>Mat:</strong> ${func.matricula} | <strong>Setor:</strong> ${func.setor}</p>
+                                        <p style="font-size: 11px; color: #94a3b8;"><strong>Cargo:</strong> ${func.cargo}</p>
+                                    </div>
+                                </div>
+                                <div style="background: rgba(2, 12, 20, 0.6); padding: 6px; border-radius: 4px; border: 1px solid rgba(0,212,255,0.15);">
+                                    <div style="font-size: 11px; color: #94a3b8;">Usuário: <strong style="color: #ffffff;">${usuarioVal}</strong></div>
+                                    <div style="font-size: 11px; color: #94a3b8;">Senha: <strong style="color: #fbbf24;">${senhaVal}</strong></div>
+                                </div>
+                            </div>
+                            <div class="acoes-card">
+                                <button class="btn-acao-resp" onclick="editarCredencialFuncionario('${func.id}', 'usuario', '${usuarioVal}')">✏️ Usuário</button>
+                                <button class="btn-acao-resp" onclick="editarCredencialFuncionario('${func.id}', 'senha', '${senhaVal}')">✏️ Senha</button>
+                                ${botaoPausarRetornar}
+                                <button class="btn-excluir-resp" onclick="excluirFuncionario('${func.id}')">🗑️ Excluir</button>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                } else {
+                    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #64748b; font-size: 13px; padding: 15px;">Nenhum funcionário encontrado para o seu setor.</div>';
+                }
+            } catch (err) {
+                loading.style.display = 'none';
+                grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #f87171; font-size: 13px; padding: 15px;">Erro ao carregar os funcionários.</div>';
+            }
+        }
+
+        async function alterarStatusFuncionario(idFunc, novoStatus) {
+            const mensagem = novoStatus === 'Pausado' ? 'Deseja pausar o acesso deste funcionário (férias)?' : 'Deseja reativar o acesso deste funcionário?';
+            if (!confirm(mensagem)) return;
+
+            try {
+                const { error } = await supabaseClient.from('funcionarios').update({ status: novoStatus }).eq('id', idFunc);
+                if (error) throw error;
+                carregarFuncionarios();
+            } catch (err) {
+                alert('Erro ao alterar status: ' + err.message);
+            }
+        }
+
+        async function editarCredencialFuncionario(idFunc, tipo, valorAtual) {
+            const titulo = tipo === 'usuario' ? 'novo nome de usuário' : 'nova senha';
+            const novoValor = prompt(`Digite o(a) ${titulo}:`, valorAtual);
+            if (novoValor === null || !novoValue.trim()) return;
+
+            const dadosUpdate = {};
+            dadosUpdate[tipo] = novoValor.trim();
+
+            try {
+                const { error } = await supabaseClient.from('funcionarios').update(dadosUpdate).eq('id', idFunc);
+                if (error) throw error;
+                alert(`${tipo === 'usuario' ? 'Usuário' : 'Senha'} atualizado(a) com sucesso!`);
+                carregarFuncionarios();
+            } catch (err) {
+                alert('Erro ao atualizar: ' + err.message);
+            }
+        }
+
+        async function excluirFuncionario(idFunc) {
+            if (!confirm('Deseja realmente excluir permanentemente este funcionário (demissão)?')) return;
+            try {
+                const { error } = await supabaseClient.from('funcionarios').delete().eq('id', idFunc);
+                if (error) throw error;
+                carregarFuncionarios();
+            } catch (err) {
+                alert('Erro ao excluir: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>
