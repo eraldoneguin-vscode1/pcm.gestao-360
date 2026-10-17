@@ -116,7 +116,7 @@
                 <div id="errorMessage" class="hidden text-rose-400 text-sm text-center bg-rose-950/40 border border-rose-800/50 py-2.5 rounded-xl transition-all"></div>
 
                 <button type="submit" id="btnEntrar"
-                    class="hidden w-full py-4 px-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold tracking-wider rounded-xl shadow-lg shadow-emerald-950/50 btn-pulse-glow transition duration-300 transform active:scale-98 uppercase text-sm">
+                    class="w-full py-4 px-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold tracking-wider rounded-xl shadow-lg shadow-emerald-950/50 btn-pulse-glow transition duration-300 transform active:scale-98 uppercase text-sm">
                     ENTRAR NO SISTEMA
                 </button>
             </form>
@@ -264,83 +264,16 @@
             }
         }
 
-        async function verificarCredenciaisEmTempoReal() {
-            const usuarioVal = usuarioInput.value.trim();
-            const senhaVal = senhaInput.value.trim();
-            errorMessage.classList.add('hidden');
-
-            if (usuarioVal.length < 2 || senhaVal.length < 3) {
-                btnEntrar.classList.add('hidden');
-                return;
-            }
-
-            try {
-                // 1. Admin
-                const { data: adminCheck } = await supabaseClient.from('administradores').select('*').eq('usuario', usuarioVal).single();
-                if (adminCheck && adminCheck.senha === senhaVal) {
-                    btnEntrar.classList.remove('hidden');
-                    return;
-                }
-
-                // 2. Empresa
-                const { data: empData } = await supabaseClient.from('empresas').select('*').eq('usuario', usuarioVal);
-                if (empData && empData.length > 0) {
-                    const empresa = empData[0];
-                    if (empresa.senha === senhaVal) {
-                        if (empresa.status === 'Pausado') {
-                            errorMessage.textContent = '⚠️ Acesso da empresa pausado.';
-                            errorMessage.classList.remove('hidden');
-                            btnEntrar.classList.add('hidden');
-                            return;
-                        }
-                        btnEntrar.classList.remove('hidden');
-                        return;
-                    }
-                }
-
-                // 3. Responsável
-                const { data: respCheck } = await supabaseClient.from('responsaveis').select('*').eq('usuario', usuarioVal).single();
-                if (respCheck && respCheck.senha === senhaVal) {
-                    if (respCheck.status === 'Pausado') {
-                        errorMessage.textContent = '⚠️ Acesso do responsável pausado.';
-                        errorMessage.classList.remove('hidden');
-                        btnEntrar.classList.add('hidden');
-                        return;
-                    }
-                    btnEntrar.classList.remove('hidden');
-                    return;
-                }
-
-                // 4. Funcionário
-                const { data: funcCheck } = await supabaseClient.from('funcionarios').select('*').eq('usuario', usuarioVal).single();
-                if (funcCheck && funcCheck.senha === senhaVal) {
-                    if (funcCheck.status === 'Pausado') {
-                        errorMessage.textContent = '⚠️ Acesso pausado (Férias).';
-                        errorMessage.classList.remove('hidden');
-                        btnEntrar.classList.add('hidden');
-                        return;
-                    }
-                    btnEntrar.classList.remove('hidden');
-                    return;
-                }
-
-                errorMessage.textContent = '❌ Usuário não cadastrado na base.';
-                errorMessage.classList.remove('hidden');
-                btnEntrar.classList.add('hidden');
-
-            } catch (err) {
-                btnEntrar.classList.add('hidden');
-            }
-        }
-
         if (usuarioInput) {
             usuarioInput.addEventListener('input', () => {
                 buscarLogoPorUsuario();
-                verificarCredenciaisEmTempoReal();
+                errorMessage.classList.add('hidden');
             });
         }
         if (senhaInput) {
-            senhaInput.addEventListener('input', verificarCredenciaisEmTempoReal);
+            senhaInput.addEventListener('input', () => {
+                errorMessage.classList.add('hidden');
+            });
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
@@ -388,7 +321,7 @@
                 window.location.href = '1cadastro-empresas.html';
             } catch (err) {
                 setupError.textContent = 'Erro ao criar master: ' + err.message;
-                setupError.classList.add('hidden');
+                setupError.classList.remove('hidden');
             }
         });
 
@@ -451,10 +384,10 @@
                     return;
                 }
 
-                throw new Error('❌ Credenciais inválidas.');
+                throw new Error('❌ Usuário e/ou senha ERRADO!❌');
 
             } catch (err) {
-                errorMessage.textContent = err.message || 'Erro ao efetuar login.';
+                errorMessage.textContent = err.message || '❌ Usuário e/ou senha ERRADO!❌';
                 errorMessage.classList.remove('hidden');
                 btnEntrar.disabled = false;
                 btnEntrar.textContent = 'ENTRAR NO SISTEMA';
