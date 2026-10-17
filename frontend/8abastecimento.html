@@ -13,12 +13,18 @@
             background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed;
             color: #ffffff; min-height: 100vh; padding: 15px;
         }
-        .container { max-width: 600px; margin: 0 auto; background: rgba(8, 30, 48, 0.95); border-radius: 12px; border: 1px solid rgba(249, 115, 22, 0.4); padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); }
+        .container { max-width: 650px; margin: 0 auto; background: rgba(8, 30, 48, 0.95); border-radius: 12px; border: 1px solid rgba(249, 115, 22, 0.4); padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e3a5f; padding-bottom: 15px; margin-bottom: 20px; }
         .header h2 { color: #f97316; font-size: 18px; display: flex; align-items: center; gap: 10px; }
         .btn-voltar { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; transition: background 0.2s; }
         .btn-voltar:hover { background: #475569; }
-        
+
+        /* Perfil do Operador */
+        .user-profile-card { display: flex; align-items: center; gap: 12px; background: rgba(2, 12, 20, 0.7); border: 1px solid #1e3a5f; padding: 12px; border-radius: 8px; margin-bottom: 20px; }
+        .user-avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #f97316; display: flex; align-items: center; justify-content: center; background: #334155; font-weight: bold; color: #f97316; font-size: 16px; }
+        .user-info .user-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .user-info .user-name { font-size: 15px; font-weight: bold; color: #fff; }
+
         .form-group { margin-bottom: 15px; }
         label { font-size: 13px; color: #cbd5e1; font-weight: 600; display: block; margin-bottom: 5px; }
         input, select { 
@@ -27,6 +33,12 @@
         }
         input:focus, select:focus { outline: none; border-color: #f97316; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4); }
         select option { background: #051622; color: #fff; }
+
+        .row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .combo-action-group { display: flex; gap: 8px; }
+        .btn-mini-action { background: #1e3a5f; color: #fff; border: 1px solid #334155; padding: 0 12px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.2s; font-size: 14px; }
+        .btn-mini-action:hover { background: #334155; border-color: #f97316; }
+        .btn-mini-action.danger:hover { background: #7f1d1d; border-color: #ef4444; }
 
         .btn-salvar { 
             background: #f97316; color: white; border: none; padding: 15px; border-radius: 8px; 
@@ -44,42 +56,47 @@
             <button id="btnVoltarPainel" class="btn-voltar" type="button">⬅ Voltar ao Painel</button>
         </div>
 
-        <div class="form-group">
-            <label>Selecione a Máquina / Ativo</label>
-            <select id="abast-ativo">
-                <option value="">A carregar ativos...</option>
-            </select>
+        <!-- Cartão do Operador Logado -->
+        <div class="user-profile-card">
+            <div id="user-avatar-container">
+                <div class="user-avatar" id="user-initials">OP</div>
+            </div>
+            <div class="user-info">
+                <div class="user-label">Operador Responsável</div>
+                <div class="user-name" id="user-fullname">A carregar operador...</div>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Operador (Responsável)</label>
-            <input type="text" id="abast-operador" placeholder="Nome do operador">
+        <!-- Linha 1: Máquina/Ativo e Horímetro Inteligente -->
+        <div class="row-grid">
+            <div class="form-group">
+                <label>Máquina / Ativo (0000-00)</label>
+                <select id="abast-ativo">
+                    <option value="">A carregar ativos...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Horímetro / KM (000000.00)</label>
+                <input type="text" id="abast-horimetro" placeholder="Ex: 123.25" onblur="formatarHorimetroInteligente(this)">
+            </div>
         </div>
 
+        <!-- Linha 2: Quantidade (Litros) -->
+        <div class="form-group">
+            <label>Quantidade (Litros)</label>
+            <input type="number" step="0.01" id="abast-litros" placeholder="Ex: 150.00">
+        </div>
+
+        <!-- Linha 3: Tipo de Combustível com Add/Delete -->
         <div class="form-group">
             <label>Tipo de Combustível</label>
-            <select id="abast-combustivel">
-                <option value="Diesel S10">Diesel S10</option>
-                <option value="Diesel S500">Diesel S500</option>
-                <option value="Gasolina">Gasolina</option>
-                <option value="Arla 32">Arla 32</option>
-            </select>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div class="form-group">
-                <label>Quantidade (Litros)</label>
-                <input type="number" id="abast-litros" placeholder="Ex: 150">
+            <div class="combo-action-group">
+                <select id="abast-combustivel" style="flex: 1;">
+                    <!-- Opções geridas dinamicamente -->
+                </select>
+                <button type="button" class="btn-mini-action" onclick="adicionarCombustivel()" title="Adicionar novo tipo">➕</button>
+                <button type="button" class="btn-mini-action danger" onclick="removerCombustivel()" title="Remover selecionado">🗑️</button>
             </div>
-            <div class="form-group">
-                <label>Horímetro / KM Atual</label>
-                <input type="number" id="abast-horimetro" placeholder="Ex: 4250">
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Custo Total (R$) - Opcional</label>
-            <input type="number" step="0.01" id="abast-custo" placeholder="Ex: 950.00">
         </div>
 
         <button id="btn-salvar-abastecimento" class="btn-salvar" type="button">🚀 Gravar Abastecimento Imediato</button>
@@ -89,6 +106,8 @@
         const SUPABASE_URL = "https://mswszxzeczyusnjccxit.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_-vY5LDwjwPB-BbFO1UCfQw_2ztUDsUp";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let operadorNomeGlobal = "Não identificado";
 
         function obterIdEmpresaAtiva() {
             return localStorage.getItem('master_empresa_ativa_id') || (() => {
@@ -100,13 +119,8 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            const usuarioStr = localStorage.getItem('pcm_usuario');
-            if (usuarioStr) {
-                try {
-                    const u = JSON.parse(usuarioStr);
-                    if (u.nome) document.getElementById('abast-operador').value = u.nome;
-                } catch(e) {}
-            }
+            carregarDadosOperador();
+            carregarOpcoesCombustivel();
 
             document.getElementById('btnVoltarPainel').addEventListener('click', () => {
                 window.location.href = '0painel-master.html';
@@ -115,6 +129,93 @@
             document.getElementById('btn-salvar-abastecimento').addEventListener('click', salvarAbastecimento);
             carregarAtivosSelect();
         });
+
+        function carregarDadosOperador() {
+            const usuarioStr = localStorage.getItem('pcm_usuario');
+            if (usuarioStr) {
+                try {
+                    const u = JSON.parse(usuarioStr);
+                    const nome = u.nome || u.nomeCompleto || u.email || "Operador PCM";
+                    operadorNomeGlobal = nome;
+                    document.getElementById('user-fullname').textContent = nome;
+
+                    // Gerar iniciais ou foto
+                    if (u.foto || u.avatar) {
+                        document.getElementById('user-avatar-container').innerHTML = `<img src="${u.foto || u.avatar}" class="user-avatar" alt="Foto">`;
+                    } else {
+                        const iniciais = nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+                        document.getElementById('user-initials').textContent = iniciais || 'OP';
+                    }
+                } catch(e) {
+                    document.getElementById('user-fullname').textContent = "Operador Padrão";
+                }
+            } else {
+                document.getElementById('user-fullname').textContent = "Operador Não Identificado";
+            }
+        }
+
+        /* Preenchimento inteligente do horímetro para 8 dígitos totais (ex: 00123.25) */
+        function formatarHorimetroInteligente(input) {
+            let val = input.value.trim();
+            if (!val) return;
+            
+            // Remove caracteres inválidos mantendo números e ponto/vírgula
+            val = val.replace(',', '.');
+            let num = parseFloat(val);
+            if (isNaN(num)) return;
+
+            // Formata preenchendo zeros à esquerda para fixar 8 caracteres no total (ex: 00123.25)
+            input.value = num.toFixed(2).padStart(9, '0');
+        }
+
+        /* Gestão de Combustíveis (Add e Delete) */
+        const combustiveisDefault = ["Diesel S10", "Diesel S500", "Gasolina", "Arla 32"];
+
+        function carregarOpcoesCombustivel() {
+            let lista = JSON.parse(localStorage.getItem('pcm_tipos_combustivel')) || combustiveisDefault;
+            const select = document.getElementById('abast-combustivel');
+            select.innerHTML = '';
+            lista.forEach(comb => {
+                const opt = document.createElement('option');
+                opt.value = comb;
+                opt.textContent = comb;
+                select.appendChild(opt);
+            });
+        }
+
+        function adicionarCombustivel() {
+            let novo = prompt("Digite o nome do novo tipo de combustível:");
+            if (novo && novo.trim() !== '') {
+                novo = novo.trim();
+                let lista = JSON.parse(localStorage.getItem('pcm_tipos_combustivel')) || combustiveisDefault;
+                if (!lista.includes(novo)) {
+                    lista.push(novo);
+                    localStorage.setItem('pcm_tipos_combustivel', JSON.stringify(lista));
+                    carregarOpcoesCombustivel();
+                    document.getElementById('abast-combustivel').value = novo;
+                } else {
+                    alert('Este combustível já existe na lista!');
+                }
+            }
+        }
+
+        function removerCombustivel() {
+            const select = document.getElementById('abast-combustivel');
+            const selecionado = select.value;
+            if (!selecionado) return;
+
+            let lista = JSON.parse(localStorage.getItem('pcm_tipos_combustivel')) || combustiveisDefault;
+            if (lista.length <= 1) {
+                alert('⚠️ Deve manter pelo menos um tipo de combustível.');
+                return;
+            }
+
+            if (confirm(`Tem certeza que deseja remover "${selecionado}" das opções?`)) {
+                lista = lista.filter(item => item !== selecionado);
+                localStorage.setItem('pcm_tipos_combustivel', JSON.stringify(lista));
+                carregarOpcoesCombustivel();
+            }
+        }
 
         async function carregarAtivosSelect() {
             const idEmpresa = obterIdEmpresaAtiva();
@@ -125,7 +226,6 @@
             }
 
             try {
-                // Tenta buscar na tabela de ativos/frota
                 const { data: ativos, error } = await supabaseClient
                     .from('ativos')
                     .select('id, nome, codigo')
@@ -133,16 +233,16 @@
 
                 if (error) throw error;
 
-                selectAtivo.innerHTML = '<option value="">Selecione o equipamento...</option>';
+                selectAtivo.innerHTML = '<option value="">Selecione o equipamento (0000-00)...</option>';
                 if (ativos && ativos.length > 0) {
                     ativos.forEach(at => {
                         const opt = document.createElement('option');
-                        opt.value = at.nome || at.codigo;
+                        opt.value = at.codigo ? `${at.codigo} - ${at.nome}` : at.nome;
                         opt.textContent = `${at.codigo ? at.codigo + ' - ' : ''}${at.nome}`;
                         selectAtivo.appendChild(opt);
                     });
                 } else {
-                    selectAtivo.innerHTML = '<option value="">Nenhum ativo encontrado</option>';
+                    selectAtivo.innerHTML = '<option value="Geral">Ativo Geral / Frota</option>';
                 }
             } catch (err) {
                 selectAtivo.innerHTML = '<option value="Geral">Ativo Geral / Frota</option>';
@@ -152,14 +252,12 @@
         async function salvarAbastecimento() {
             const idEmpresa = obterIdEmpresaAtiva();
             const ativo = document.getElementById('abast-ativo').value;
-            const operador = document.getElementById('abast-operador').value.trim();
             const combustivel = document.getElementById('abast-combustivel').value;
             const litros = document.getElementById('abast-litros').value;
             const horimetro = document.getElementById('abast-horimetro').value;
-            const custo = document.getElementById('abast-custo').value;
 
             if (!ativo || !litros || !horimetro) {
-                alert('⚠️ Preencha pelo menos a máquina, os litros e o horímetro!');
+                alert('⚠️ Preencha a máquina, a quantidade de litros e o horímetro!');
                 return;
             }
 
@@ -167,21 +265,19 @@
                 const { error } = await supabaseClient.from('abastecimentos').insert([{
                     id_empresa: idEmpresa,
                     ativo: ativo,
-                    operador: operador || 'Não identificado',
+                    operador: operadorNomeGlobal,
                     tipo_combustivel: combustivel,
                     litros: parseFloat(litros),
-                    horimetro: parseFloat(horimetro),
-                    custo_total: custo ? parseFloat(custo) : 0,
+                    horimetro: horimetro, // Grava como texto formatado inteligente
+                    custo_total: 0,
                     data_registo: new Date().toISOString()
                 }]);
 
                 if (error) throw error;
 
                 alert('✅ Abastecimento registado com sucesso!');
-                // Limpa apenas os campos variáveis para o próximo abastecimento relâmpago
                 document.getElementById('abast-litros').value = '';
                 document.getElementById('abast-horimetro').value = '';
-                document.getElementById('abast-custo').value = '';
                 document.getElementById('abast-ativo').selectedIndex = 0;
             } catch (err) {
                 alert('❌ Erro ao registar: ' + err.message);
