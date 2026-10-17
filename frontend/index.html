@@ -158,10 +158,10 @@
         </div>
     </div>
 
-    <!-- MODAL DE RECUPERAÇÃO DE SENHA VIA CPF -->
+    <!-- MODAL DE RECUPERAÇÃO E ALTERAÇÃO DE DADOS VIA CPF -->
     <div id="recoveryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
         <div class="bg-slate-900 border border-emerald-500/30 rounded-2xl w-full max-w-sm p-6 shadow-2xl relative animate-card-entry">
-            <h3 class="text-xl font-bold text-white mb-2">RECUPERAR SENHA</h3>
+            <h3 class="text-xl font-bold text-white mb-2">RECUPERAR / ALTERAR DADOS</h3>
             <p id="recoveryInstruction" class="text-slate-400 text-sm mb-4">Informe o seu CPF cadastrado para validar a sua identidade.</p>
             
             <!-- Etapa 1: Digitar CPF -->
@@ -169,10 +169,20 @@
                 <input type="text" id="recoveryCpf" maxlength="14" placeholder="000.000.000-00" oninput="mascaraCPFModal(this)" class="w-full px-4 py-3.5 bg-slate-950/70 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 mb-4">
             </div>
 
-            <!-- Etapa 2: Digitar Nova Senha (Oculto inicialmente) -->
-            <div id="stepNewPasswordContainer" class="hidden space-y-3 mb-4">
-                <input type="password" id="novaSenha1" placeholder="Nova senha" class="w-full px-4 py-3.5 bg-slate-950/70 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500">
-                <input type="password" id="novaSenha2" placeholder="Confirmar nova senha" class="w-full px-4 py-3.5 bg-slate-950/70 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500">
+            <!-- Etapa 2: Definir novo Usuário e Senha (Oculto inicialmente) -->
+            <div id="stepNewDataContainer" class="hidden space-y-3 mb-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Novo Nome de Usuário</label>
+                    <input type="text" id="novoUsuarioInput" placeholder="Ex: novo_usuario" class="w-full px-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Nova Senha</label>
+                    <input type="password" id="novaSenha1" placeholder="••••••••" class="w-full px-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Confirmar Nova Senha</label>
+                    <input type="password" id="novaSenha2" placeholder="••••••••" class="w-full px-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 text-sm">
+                </div>
             </div>
 
             <div id="recoveryMessage" class="hidden text-sm mb-3 text-center py-2 rounded-xl"></div>
@@ -420,7 +430,7 @@
         });
 
         // ==========================================
-        // LÓGICA DE RECUPERAÇÃO DE SENHA VIA CPF
+        // LÓGICA DE RECUPERAÇÃO E ALTERAÇÃO DE DADOS VIA CPF
         // ==========================================
         const recuperarBtn = document.getElementById('recuperarSenhaBtn');
         const recoveryModal = document.getElementById('recoveryModal');
@@ -429,10 +439,11 @@
         const recoveryMessage = document.getElementById('recoveryMessage');
         const recoveryCpfInput = document.getElementById('recoveryCpf');
         const stepCpfContainer = document.getElementById('stepCpfContainer');
-        const stepNewPasswordContainer = document.getElementById('stepNewPasswordContainer');
+        const stepNewDataContainer = document.getElementById('stepNewDataContainer');
         const recoveryInstruction = document.getElementById('recoveryInstruction');
+        const novoUsuarioInput = document.getElementById('novoUsuarioInput');
 
-        let etapaRecuperacao = 1; // 1: Validar CPF, 2: Gravar nova senha
+        let etapaRecuperacao = 1; // 1: Validar CPF, 2: Gravar novo usuário e senha
         let usuarioEncontradoRecuperacao = null;
 
         if (recuperarBtn) {
@@ -441,7 +452,7 @@
                 etapaRecuperacao = 1;
                 usuarioEncontradoRecuperacao = null;
                 stepCpfContainer.classList.remove('hidden');
-                stepNewPasswordContainer.classList.add('hidden');
+                stepNewDataContainer.classList.add('hidden');
                 recoveryInstruction.textContent = 'Informe o seu CPF cadastrado para validar a sua identidade.';
                 sendRecovery.textContent = 'Avançar';
                 recoveryMessage.classList.add('hidden');
@@ -455,6 +466,7 @@
                 recoveryModal.classList.add('hidden');
                 recoveryMessage.classList.add('hidden');
                 recoveryCpfInput.value = '';
+                novoUsuarioInput.value = '';
                 document.getElementById('novaSenha1').value = '';
                 document.getElementById('novaSenha2').value = '';
             });
@@ -500,14 +512,22 @@
                             throw new Error('❌ CPF não encontrado na base de dados.');
                         }
 
-                        usuarioEncontradoRecuperacao = { id: encontrado.id, tabela: tabelaAlvo, nome: encontrado.nome || encontrado.usuario };
+                        usuarioEncontradoRecuperacao = { 
+                            id: encontrado.id, 
+                            tabela: tabelaAlvo, 
+                            nome: encontrado.nome || encontrado.usuario,
+                            usuarioAtual: encontrado.usuario || ''
+                        };
                         
-                        // Avança para a Etapa 2 (Definir nova senha)
+                        // Pré-preenche o campo de usuário atual para facilitar
+                        novoUsuarioInput.value = usuarioEncontradoRecuperacao.usuarioAtual;
+
+                        // Avança para a Etapa 2 (Definir novo usuário e senha)
                         etapaRecuperacao = 2;
                         stepCpfContainer.classList.add('hidden');
-                        stepNewPasswordContainer.classList.remove('hidden');
-                        recoveryInstruction.textContent = `Identidade confirmada para: ${usuarioEncontradoRecuperacao.nome}. Defina a sua nova senha:`;
-                        sendRecovery.textContent = 'Salvar Nova Senha';
+                        stepNewDataContainer.classList.remove('hidden');
+                        recoveryInstruction.textContent = `Identidade confirmada (${usuarioEncontradoRecuperacao.nome}). Altere seus dados abaixo:`;
+                        sendRecovery.textContent = 'Salvar Alterações';
                         sendRecovery.disabled = false;
 
                     } catch (err) {
@@ -519,8 +539,16 @@
                     }
 
                 } else if (etapaRecuperacao === 2) {
+                    const novoUser = novoUsuarioInput.value.trim();
                     const senha1 = document.getElementById('novaSenha1').value.trim();
                     const senha2 = document.getElementById('novaSenha2').value.trim();
+
+                    if (!novoUser) {
+                        recoveryMessage.textContent = '⚠️ O nome de usuário não pode estar vazio.';
+                        recoveryMessage.className = 'text-rose-400 text-sm mb-3 bg-rose-950/40 border border-rose-800/50 py-2 rounded-xl';
+                        recoveryMessage.classList.remove('hidden');
+                        return;
+                    }
 
                     if (!senha1 || senha1.length < 4) {
                         recoveryMessage.textContent = '⚠️ A senha deve ter pelo menos 4 caracteres.';
@@ -542,28 +570,32 @@
                     try {
                         const { error } = await supabaseClient
                             .from(usuarioEncontradoRecuperacao.tabela)
-                            .update({ senha: senha1 })
+                            .update({ 
+                                usuario: novoUser, 
+                                senha: senha1 
+                            })
                             .eq('id', usuarioEncontradoRecuperacao.id);
 
                         if (error) throw error;
 
-                        recoveryMessage.textContent = '✅ Senha alterada com sucesso! Já pode fazer login.';
+                        recoveryMessage.textContent = '✅ Dados alterados com sucesso! Já pode fazer login.';
                         recoveryMessage.className = 'text-emerald-400 text-sm mb-3 bg-emerald-950/40 border border-emerald-800/50 py-2 rounded-xl';
                         recoveryMessage.classList.remove('hidden');
 
                         setTimeout(() => {
                             recoveryModal.classList.add('hidden');
                             recoveryMessage.classList.add('hidden');
+                            novoUsuarioInput.value = '';
                             document.getElementById('novaSenha1').value = '';
                             document.getElementById('novaSenha2').value = '';
                         }, 2000);
 
                     } catch (err) {
-                        recoveryMessage.textContent = 'Erro ao atualizar senha: ' + err.message;
+                        recoveryMessage.textContent = 'Erro ao atualizar dados: ' + err.message;
                         recoveryMessage.className = 'text-rose-400 text-sm mb-3 bg-rose-950/40 border border-rose-800/50 py-2 rounded-xl';
                         recoveryMessage.classList.remove('hidden');
                         sendRecovery.disabled = false;
-                        sendRecovery.textContent = 'Salvar Nova Senha';
+                        sendRecovery.textContent = 'Salvar Alterações';
                     }
                 }
             });
